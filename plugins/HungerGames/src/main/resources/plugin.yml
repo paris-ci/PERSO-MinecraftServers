@@ -6,3 +6,62 @@ prefix: HG
 authors: [ paris-ci ]
 description: The best hunger games plugin our server ever knew
 website: mc.api-d.com
+
+commands:
+  credits:
+    description: View and manage player credits
+    usage: /<command> [player] | /<command> give <player> <amount>
+    aliases: [c, credit]
+  kit:
+    description: Select and view kits
+    usage: /<command> [kit_name]
+    aliases: [k, kits]
+  compass:
+    description: Change compass tracking mode
+    usage: /<command> <mode>
+    aliases: [track]
+  spectate:
+    description: Teleport to another player (spectators only)
+    usage: /<command> <player>
+    aliases: [spec, tp]
+
+permissions:
+  hungergames.*:
+    description: All HungerGames permissions
+    default: op
+    children:
+      hungergames.credits: true
+      hungergames.credits.other: true
+      hungergames.credits.give: true
+      hungergames.kit: true
+      hungergames.kit.select: true
+      hungergames.compass.select: true
+      hungergames.spectate: true
+  
+  hungergames.credits:
+    description: View your own credits
+    default: true
+  
+  hungergames.credits.other:
+    description: View other players' credits
+    default: op
+  
+  hungergames.credits.give:
+    description: Give credits to players
+    default: op
+  
+  hungergames.kit:
+    description: View available kits
+    default: true
+  
+  hungergames.kit.select:
+    description: Select kits
+    default: true
+  
+  hungergames.compass.select:
+    description: Change compass tracking mode
+    default: true
+  
+  hungergames.spectate:
+    description: Spectate other players
+    default: true
