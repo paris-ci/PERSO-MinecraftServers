@@ -1,0 +1,8 @@
+name: HungerGames
+version: '1.0-SNAPSHOT'
+main: com.api_d.hungerGames.HungerGames
+api-version: '1.21'
+prefix: HG
+authors: [ paris-ci ]
+description: The best hunger games plugin our server ever knew
+website: mc.api-d.com
