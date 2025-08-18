@@ -1,0 +1,104 @@
+services:
+  velocity:
+    image: itzg/mc-proxy:latest
+    container_name: velocity
+    hostname: velocity
+    restart: unless-stopped
+    environment:
+      TYPE: VELOCITY
+      # expose proxy to LAN/WAN via host port 25565
+      # Velocity listens on 25577 by default; we map 25565->25577
+      TZ: Europe/Paris
+    ports:
+      - "25565:25577/tcp"
+    volumes:
+      - ./opt/velocity:/server
+      - ./velocity.toml:/config/velocity.toml:ro
+      - ./forwarding.secret:/config/forwarding.secret:ro
+    networks:
+      - mc
+    depends_on:
+      postgres:
+        condition: service_healthy
+  lobby:
+    image: itzg/minecraft-server
+    container_name: lobby
+    hostname: lobby
+    environment:
+      EULA: "TRUE"
+      TYPE: "PAPER"
+      ONLINE_MODE: "FALSE"
+      MEMORY: "4096M"
+      MAX_PLAYERS: "100"
+      USE_AIKAR_FLAGS: "true"
+      DIFFICULTY: "2"
+      OPS: |-
+        aca55782-e9cf-406b-afb1-91bb1c424212
+      ENFORCE_SECURE_PROFILE: "false"
+      ALLOW_FLIGHT: "true"
+      ENABLE_ROLLING_LOGS: "true"
+      LOG_TIMESTAMP: "true"
+      REMOVE_OLD_MODS: "true"
+      COPY_PLUGINS_SRC: /plugins-common,/plugins-local
+    volumes:
+      - ./paper-global.yml:/config/paper-global.yml
+      - ./plugins-common:/plugins-common:ro
+      - ./plugins-lobby:/plugins-local:ro
+      - ./opt/mc_lobby:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - mc
+  hungergames:
+    image: itzg/minecraft-server
+    container_name: hungergames
+    hostname: hungergames
+    environment:
+      EULA: "TRUE"
+      TYPE: "PAPER"
+      ONLINE_MODE: "FALSE"
+      MEMORY: "4096M"
+      MAX_PLAYERS: "100"
+      USE_AIKAR_FLAGS: "true"
+      DIFFICULTY: "2"
+      OPS: |-
+        aca55782-e9cf-406b-afb1-91bb1c424212
+      ENFORCE_SECURE_PROFILE: "false"
+      ALLOW_FLIGHT: "true"
+      ENABLE_ROLLING_LOGS: "true"
+      LOG_TIMESTAMP: "true"
+      REMOVE_OLD_MODS: "true"
+      COPY_PLUGINS_SRC: /plugins-common,/plugins-local
+    volumes:
+      - ./paper-global.yml:/config/paper-global.yml
+      - ./plugins-common:/plugins-common:ro
+      - ./plugins-hungergames:/plugins-local:ro
+      - ./opt/mc_hungergames:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - mc
+  postgres:
+    image: pgautoupgrade/pgautoupgrade:17-bookworm
+    container_name: postgres
+    hostname: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: minecraft
+      PGDATA: /var/lib/postgresql/data
+      PG_VERSION: 17
+    # ports:
+    #   - "127.0.0.1:5432:5432/tcp"
+    volumes:
+      - ./opt/postgres:/var/lib/postgresql/data
+    networks:
+      - mc
+
+networks:
+  mc:
+
+
