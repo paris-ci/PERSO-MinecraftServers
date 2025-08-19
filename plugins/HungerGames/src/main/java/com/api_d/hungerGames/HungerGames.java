@@ -24,6 +24,7 @@ import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.Material;
@@ -156,8 +157,9 @@ public final class HungerGames extends JavaPlugin implements Listener {
         // Register commands
         getCommand("credits").setExecutor(new CreditsCommand(this));
         getCommand("credits").setTabCompleter(new CreditsCommand(this));
-        getCommand("kit").setExecutor(new KitCommand(this));
-        getCommand("kit").setTabCompleter(new KitCommand(this));
+        KitCommand kitCommand = new KitCommand(this);
+        getCommand("kit").setExecutor(kitCommand);
+        getCommand("kit").setTabCompleter(kitCommand);
         getCommand("compass").setExecutor(new CompassCommand(this));
         getCommand("compass").setTabCompleter(new CompassCommand(this));
         getCommand("spectate").setExecutor(new SpectateCommand(this));
@@ -333,8 +335,12 @@ public final class HungerGames extends JavaPlugin implements Listener {
             
             // Handle the death through our game manager
             Player killer = player.getKiller();
-            String deathMessage = event.getDeathMessage();
-            if (deathMessage == null) {
+            String deathMessage;
+            
+            // Use the modern deathMessage() method instead of deprecated getDeathMessage()
+            if (event.deathMessage() != null) {
+                deathMessage = LegacyComponentSerializer.legacySection().serialize(event.deathMessage());
+            } else {
                 deathMessage = player.getName() + " died";
             }
             
@@ -382,6 +388,8 @@ public final class HungerGames extends JavaPlugin implements Listener {
             // Remove the arrow first
             arrow.remove();
             
+            // Create explosion that deals damage to players and mobs
+            // Parameters: location, power, setFire, breakBlocks, source
             arrow.getWorld().createExplosion(hitLocation, 4f, true, true, shooter);
             
             // Play explosion sound
@@ -390,7 +398,40 @@ public final class HungerGames extends JavaPlugin implements Listener {
             // Add explosion particles for visual effect
             arrow.getWorld().spawnParticle(org.bukkit.Particle.EXPLOSION, hitLocation, 1);
             
-            hgLogger.info("Explosive arrow hit by " + shooter.getName() + " at " + hitLocation);
+            // Ensure nearby entities take damage from the explosion
+            // This is a backup method to ensure damage is applied
+            double explosionRadius = 4.0;
+            arrow.getWorld().getNearbyEntities(hitLocation, explosionRadius, explosionRadius, explosionRadius)
+                .stream()
+                .filter(entity -> entity instanceof LivingEntity)
+                .filter(entity -> entity != shooter) // Don't damage the shooter
+                .map(entity -> (LivingEntity) entity)
+                .forEach(entity -> {
+                    double distance = entity.getLocation().distance(hitLocation);
+                    if (distance <= explosionRadius) {
+                        // Calculate damage based on distance (more damage closer to center)
+                        double damageMultiplier = 1.0 - (distance / explosionRadius);
+                        double damage = Math.max(1.0, 8.0 * damageMultiplier); // 8 damage at center, decreasing with distance
+                        
+                        // Apply damage
+                        entity.damage(damage, shooter);
+                        
+                        // Apply knockback
+                        if (entity instanceof Player) {
+                            Player targetPlayer = (Player) entity;
+                            if (targetPlayer.getGameMode() != org.bukkit.GameMode.SPECTATOR) {
+                                // Apply knockback effect
+                                org.bukkit.util.Vector knockback = entity.getLocation().toVector()
+                                    .subtract(hitLocation.toVector())
+                                    .normalize()
+                                    .multiply(2.0); // Knockback strength
+                                entity.setVelocity(knockback);
+                            }
+                        }
+                    }
+                });
+            
+            hgLogger.info("Explosive arrow hit by " + shooter.getName() + " at " + hitLocation + " - explosion radius: " + explosionRadius);
         }
     }
     

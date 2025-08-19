@@ -52,19 +52,35 @@ public class BerserkerKit extends Kit {
     
     @Override
     public void onDeath(Player player, Player killer) {
-        // Create explosion at death location
-        player.getWorld().createExplosion(player.getLocation(), 3.0f, false, false);
+        // Create explosion at death location that deals damage to players and mobs
+        // Parameters: location, power, setFire, breakBlocks, source
+        player.getWorld().createExplosion(player.getLocation(), 3.0f, false, false, player);
         
-        // Damage nearby players (but don't destroy blocks)
+        // Additional manual damage to nearby players (but don't destroy blocks)
         player.getWorld().getNearbyEntities(player.getLocation(), 5, 5, 5)
             .stream()
-            .filter(entity -> entity instanceof Player)
+            .filter(entity -> entity instanceof org.bukkit.entity.LivingEntity)
             .filter(entity -> entity != player)
-            .map(entity -> (Player) entity)
-            .forEach(nearbyPlayer -> {
-                double distance = nearbyPlayer.getLocation().distance(player.getLocation());
+            .map(entity -> (org.bukkit.entity.LivingEntity) entity)
+            .forEach(entity -> {
+                double distance = entity.getLocation().distance(player.getLocation());
                 double damage = Math.max(1, 8 - distance); // 8 damage at center, decreasing with distance
-                nearbyPlayer.damage(damage);
+                
+                // Apply damage
+                entity.damage(damage, player);
+                
+                // Apply knockback for players
+                if (entity instanceof Player) {
+                    Player nearbyPlayer = (Player) entity;
+                    if (nearbyPlayer.getGameMode() != org.bukkit.GameMode.SPECTATOR) {
+                        // Apply knockback effect
+                        org.bukkit.util.Vector knockback = entity.getLocation().toVector()
+                            .subtract(player.getLocation().toVector())
+                            .normalize()
+                            .multiply(1.5); // Knockback strength
+                        entity.setVelocity(knockback);
+                    }
+                }
             });
     }
     

@@ -209,6 +209,14 @@ public class KitSelectionGUI implements Listener {
         ItemStack clickedItem = event.getCurrentItem();
         if (clickedItem == null || clickedItem.getType() == Material.AIR) return;
         
+        // Check if this is a confirmation inventory
+        String title = event.getView().title().toString();
+        String cleanTitle = title.replaceAll("§[0-9a-fk-or]", "");
+        if (cleanTitle.contains("Confirm Kit Purchase")) {
+            handleConfirmationClick(event, player);
+            return;
+        }
+        
         // Check if it's the info item
         if (clickedItem.getType() == Material.GOLD_INGOT) {
             return; // Info item, do nothing
@@ -316,22 +324,15 @@ public class KitSelectionGUI implements Listener {
         cancelItem.setItemMeta(cancelMeta);
         confirmInventory.setItem(15, cancelItem);
         
-        // Open confirmation inventory
+        // Track this inventory and open it
+        openInventories.put(player.getUniqueId(), confirmInventory);
         player.openInventory(confirmInventory);
     }
     
     /**
      * Handle confirmation dialog clicks
      */
-    @EventHandler
-    public void onConfirmationClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player)) return;
-        
-        String title = event.getView().title().toString();
-        if (!title.contains("Confirm Kit Purchase")) return;
-        
-        event.setCancelled(true);
-        
+    private void handleConfirmationClick(InventoryClickEvent event, Player player) {
         ItemStack clickedItem = event.getCurrentItem();
         if (clickedItem == null || clickedItem.getType() == Material.AIR) return;
         

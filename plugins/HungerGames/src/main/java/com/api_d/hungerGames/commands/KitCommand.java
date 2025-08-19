@@ -62,22 +62,14 @@ public class KitCommand extends BaseCommand implements TabCompleter {
             
             // Check if player can afford the kit
             int playerCredits = plugin.getPlayerManager().getPlayerCredits(player);
-            if (!kit.canPlayerUse(player, playerCredits)) {
-                sendMessage(sender, plugin.getGameConfig().getMessage("insufficient_credits"));
-                sendMessage(sender, "You need " + kit.getCost() + " credits for this kit. You have " + playerCredits + " credits.");
-                return true;
-            }
             
-            // Check if player should pay for the kit
+            // Check if player should pay for the kit and has enough credits
             if (kit.shouldPlayerPay(player)) {
-                // Player needs to pay
+                // Player needs to pay - check if they have enough credits
                 if (playerCredits < kit.getCost()) {
-                    sendMessage(sender, "§cInsufficient credits! You need " + kit.getCost() + " credits for this kit.");
+                    sendMessage(sender, "§cInsufficient credits! You need " + kit.getCost() + " credits for this kit. You have " + playerCredits + " credits.");
                     return true;
                 }
-            } else {
-                // Admin bypass - no payment needed
-                sendMessage(sender, "§a§l[Admin] §7Kit cost bypassed due to admin permissions!");
             }
             
             // Fire kit selection event

@@ -15,7 +15,7 @@ import java.util.List;
 public class ArcherProKit extends Kit {
     
     public ArcherProKit() {
-        super("archer_pro", "Archer Pro", "Explosive arrows that explode on impact! Advanced archery, costs 1000 credits", 
+        super("archer_pro", "Archer Pro", "Explosive arrows that explode on impact, dealing damage to players and mobs! Advanced archery, costs 1000 credits", 
               true, 1000, Material.BOW);
     }
     
@@ -40,7 +40,6 @@ public class ArcherProKit extends Kit {
         // The explosive arrow effect is handled by the main plugin's ProjectileHitEvent
         // All arrows shot by players with this kit will explode on impact
         player.sendMessage("§a§l[Archer Pro] §7Your arrows will now explode on impact!");
-        player.sendMessage("§a§l[Archer Pro] §7You have 32 explosive arrows - use them wisely!");
     }
     
     @Override

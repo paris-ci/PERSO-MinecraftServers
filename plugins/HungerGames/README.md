@@ -298,11 +298,12 @@ Cost: 1000 credits
 
 Starting items:
 - Bow
-- 15 arrows
+- 32 arrows
 - Flint and steel
 
 Starting effects:
-- Arrows explode on hit, dealing damage, knockback and destroying blocks just like TNT would)
+- Arrows explode on hit, dealing damage to players and mobs within 4 blocks
+- Explosions cause knockback and destroy blocks like TNT
 - Arrows collide with spectators
 
 ## FAQ

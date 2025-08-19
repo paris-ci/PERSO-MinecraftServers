@@ -25,18 +25,10 @@ public class SpectateCommand extends BaseCommand implements TabCompleter {
     
     @Override
     protected boolean execute(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage("§cThis command can only be used by players!");
-            return true;
-        }
+        Player player = getPlayer(sender);
+        if (player == null) return true;
         
-        Player player = (Player) sender;
-        
-        // Check if player has permission
-        if (!player.hasPermission("hungergames.spectate")) {
-            player.sendMessage("§cYou don't have permission to use this command!");
-            return true;
-        }
+        if (!checkPermission(sender, "hungergames.spectate")) return true;
         
         // Check if game is running
         GameManager gameManager = plugin.getGameManager();
