@@ -990,18 +990,11 @@ public class GameManager implements Listener {
             logger.info("Game is now active - disabling protection features");
             protectionManager.updateAllPlayersFlight();
             
-            // Schedule PvP enable if not already enabled
-            if (!pvpEnabled) {
-                schedulePvpEnable();
-            }
+            // PvP enable is already scheduled in startActivePhase()
+            // No need to schedule it again here
             
-            // Schedule feast spawn if not already spawned
-            if (!feastSpawned && config.isFeastEnabled()) {
-                scheduleFeastSpawn();
-            }
-            
-            // Start survival credit task
-            startSurvivalCredits();
+            // Feast spawn and survival credit task are already started in startActivePhase()
+            // No need to start them again here
             
         } else if (event.getNewState() == GameState.FEAST) {
             // Feast state activated

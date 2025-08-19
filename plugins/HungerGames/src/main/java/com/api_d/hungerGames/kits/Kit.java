@@ -21,6 +21,9 @@ public abstract class Kit {
     protected final int cost;
     protected final Material icon;
     
+    // Permission for admins to bypass kit costs
+    public static final String ADMIN_BYPASS_PERMISSION = "hungergames.admin.bypass.kitcost";
+    
     public Kit(String id, String displayName, String description, boolean isPremium, int cost, Material icon) {
         this.id = id;
         this.displayName = displayName;
@@ -163,13 +166,57 @@ public abstract class Kit {
     }
     
     /**
-     * Check if a player can use this kit (based on credits)
+     * Check if a player can use this kit (based on credits or admin permissions)
      */
     public boolean canPlayerUse(Player player, int playerCredits) {
         if (!isPremium) {
             return true;
         }
+        
+        // Check if player has admin bypass permission
+        if (player.hasPermission(ADMIN_BYPASS_PERMISSION)) {
+            return true;
+        }
+        
         return playerCredits >= cost;
+    }
+    
+    /**
+     * Check if a player should pay for this kit (admins with bypass permission don't pay)
+     */
+    public boolean shouldPlayerPay(Player player) {
+        if (!isPremium) {
+            return false;
+        }
+        
+        // Admins with bypass permission don't pay
+        if (player.hasPermission(ADMIN_BYPASS_PERMISSION)) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Check if a player has admin bypass permission
+     */
+    public boolean hasAdminBypass(Player player) {
+        return player.hasPermission(ADMIN_BYPASS_PERMISSION);
+    }
+    
+    /**
+     * Get the effective cost for a player (0 if admin bypass, normal cost otherwise)
+     */
+    public int getEffectiveCost(Player player) {
+        if (!isPremium) {
+            return 0;
+        }
+        
+        if (hasAdminBypass(player)) {
+            return 0;
+        }
+        
+        return cost;
     }
     
     /**
@@ -194,6 +241,10 @@ public abstract class Kit {
                 lore.add(net.kyori.adventure.text.Component.text("§7Cost: §e" + cost + " credits"));
                 if (!canAfford) {
                     lore.add(net.kyori.adventure.text.Component.text("§cInsufficient credits"));
+                }
+                // Add admin bypass info if applicable
+                if (canAfford && cost > 0) {
+                    lore.add(net.kyori.adventure.text.Component.text("§a§l[ADMIN] §7Use /kit " + id + " to bypass cost"));
                 }
             } else {
                 lore.add(net.kyori.adventure.text.Component.text("§aFree Kit"));

@@ -68,6 +68,18 @@ public class KitCommand extends BaseCommand implements TabCompleter {
                 return true;
             }
             
+            // Check if player should pay for the kit
+            if (kit.shouldPlayerPay(player)) {
+                // Player needs to pay
+                if (playerCredits < kit.getCost()) {
+                    sendMessage(sender, "§cInsufficient credits! You need " + kit.getCost() + " credits for this kit.");
+                    return true;
+                }
+            } else {
+                // Admin bypass - no payment needed
+                sendMessage(sender, "§a§l[Admin] §7Kit cost bypassed due to admin permissions!");
+            }
+            
             // Fire kit selection event
             KitSelectionEvent event = new KitSelectionEvent(player, kitId);
             Bukkit.getPluginManager().callEvent(event);
@@ -80,15 +92,20 @@ public class KitCommand extends BaseCommand implements TabCompleter {
                 return true;
             }
             
-            // Deduct credits if premium kit
-            if (kit.isPremium()) {
+            // Deduct credits if premium kit and player should pay
+            if (kit.isPremium() && kit.shouldPlayerPay(player)) {
                 plugin.getPlayerManager().deductCredits(player.getUniqueId(), kit.getCost(), "Purchased " + kit.getDisplayName() + " kit");
             }
             
             // Select the kit
             plugin.getKitManager().setPlayerKit(player, kitId);
             
-            sendMessage(sender, plugin.getGameConfig().getMessage("kit_selected", "kit", kit.getDisplayName()));
+            // Show success message with admin bypass info if applicable
+            if (kit.isPremium() && !kit.shouldPlayerPay(player)) {
+                sendMessage(sender, "§a§l[Admin Bypass] §7Kit " + kit.getDisplayName() + " selected for FREE!");
+            } else {
+                sendMessage(sender, plugin.getGameConfig().getMessage("kit_selected", "kit", kit.getDisplayName()));
+            }
             
             return true;
         }

@@ -18,6 +18,15 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.entity.ProjectileHitEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.player.PlayerGameModeChangeEvent;
+import org.bukkit.entity.Arrow;
+import org.bukkit.entity.Player;
+import org.bukkit.Location;
+import org.bukkit.Sound;
+import org.bukkit.Material;
 import org.bukkit.plugin.java.JavaPlugin;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
@@ -303,6 +312,137 @@ public final class HungerGames extends JavaPlugin implements Listener {
             
         } catch (Exception e) {
             hgLogger.log(Level.SEVERE, "Error handling player quit: " + event.getPlayer().getName(), e);
+        }
+    }
+    
+    /**
+     * Handle player death events to prevent respawning
+     */
+    @EventHandler
+    public void onPlayerDeath(PlayerDeathEvent event) {
+        if (!initialized || gameManager == null) {
+            return;
+        }
+        
+        Player player = event.getEntity();
+        
+        // Check if this player is in an active game
+        if (gameManager.getAlivePlayers().contains(player.getUniqueId())) {
+            // Cancel the death event to prevent respawning
+            event.setCancelled(true);
+            
+            // Handle the death through our game manager
+            Player killer = player.getKiller();
+            String deathMessage = event.getDeathMessage();
+            if (deathMessage == null) {
+                deathMessage = player.getName() + " died";
+            }
+            
+            gameManager.handlePlayerDeath(player, killer, deathMessage);
+            
+            // Set the player to spectator mode immediately
+            player.setGameMode(org.bukkit.GameMode.SPECTATOR);
+            
+            // Clear inventory and prevent drops
+            event.getDrops().clear();
+            event.setKeepInventory(false);
+            
+            hgLogger.info("Prevented respawn for " + player.getName() + " and set to spectator mode");
+        }
+    }
+    
+    /**
+     * Handle projectile hit events for explosive arrows
+     */
+    @EventHandler
+    public void onProjectileHit(ProjectileHitEvent event) {
+        if (!initialized || gameManager == null) {
+            return;
+        }
+        
+        // Check if this is an arrow
+        if (!(event.getEntity() instanceof Arrow)) {
+            return;
+        }
+        
+        Arrow arrow = (Arrow) event.getEntity();
+        
+        // Check if the arrow was shot by a player
+        if (!(arrow.getShooter() instanceof Player)) {
+            return;
+        }
+        
+        Player shooter = (Player) arrow.getShooter();
+        
+        // Check if the shooter has the Archer Pro kit
+        if (kitManager.getPlayerKit(shooter.getUniqueId()) instanceof com.api_d.hungerGames.kits.premium.ArcherProKit) {
+            // Create explosion at arrow location
+            Location hitLocation = arrow.getLocation();
+            
+            // Remove the arrow first
+            arrow.remove();
+            
+            arrow.getWorld().createExplosion(hitLocation, 4f, true, true, shooter);
+            
+            // Play explosion sound
+            arrow.getWorld().playSound(hitLocation, Sound.ENTITY_GENERIC_EXPLODE, 1.0f, 1.0f);
+            
+            // Add explosion particles for visual effect
+            arrow.getWorld().spawnParticle(org.bukkit.Particle.EXPLOSION, hitLocation, 1);
+            
+            hgLogger.info("Explosive arrow hit by " + shooter.getName() + " at " + hitLocation);
+        }
+    }
+    
+    /**
+     * Handle player respawn events to prevent respawning during games
+     */
+    @EventHandler
+    public void onPlayerRespawn(PlayerRespawnEvent event) {
+        if (!initialized || gameManager == null) {
+            return;
+        }
+        
+        Player player = event.getPlayer();
+        
+        // Check if this player was in an active game and is now dead
+        if (gameManager.getDeadPlayers().contains(player.getUniqueId())) {
+            // Cancel the respawn and keep them as spectator
+            event.setRespawnLocation(player.getLocation());
+            
+            // Schedule a task to ensure they stay in spectator mode
+            Bukkit.getScheduler().runTaskLater(this, () -> {
+                if (player.isOnline()) {
+                    player.setGameMode(org.bukkit.GameMode.SPECTATOR);
+                    hgLogger.info("Forced " + player.getName() + " to stay in spectator mode after respawn attempt");
+                }
+            }, 1L);
+        }
+    }
+    
+    /**
+     * Handle game mode change events to prevent dead players from changing game mode
+     */
+    @EventHandler
+    public void onPlayerGameModeChange(PlayerGameModeChangeEvent event) {
+        if (!initialized || gameManager == null) {
+            return;
+        }
+        
+        Player player = event.getPlayer();
+        
+        // Check if this player is dead and trying to change from spectator mode
+        if (gameManager.getDeadPlayers().contains(player.getUniqueId()) && 
+            event.getNewGameMode() != org.bukkit.GameMode.SPECTATOR) {
+            
+            // Cancel the game mode change
+            event.setCancelled(true);
+            
+            // Force them back to spectator mode
+            player.setGameMode(org.bukkit.GameMode.SPECTATOR);
+            
+            player.sendMessage("§c§l[Game] §7You cannot change your game mode while dead!");
+            hgLogger.info("Prevented " + player.getName() + " from changing game mode while dead");
         }
     }
     

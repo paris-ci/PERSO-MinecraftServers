@@ -65,6 +65,8 @@ public class AdminCommand extends BaseCommand implements TabCompleter {
                 return handleDebug(sender, args);
             case "debuglootchest":
                 return handleDebugLootChest(sender, args);
+            case "bypass":
+                return handleBypass(sender, args);
             default:
                 showHelp(sender);
                 return true;
@@ -463,6 +465,33 @@ public class AdminCommand extends BaseCommand implements TabCompleter {
     }
     
     /**
+     * Handle the bypass command to show players with admin bypass permissions
+     */
+    private boolean handleBypass(CommandSender sender, String[] args) {
+        if (!checkPermission(sender, "hungergames.admin.bypass")) return true;
+        
+        sendMessage(sender, "§6=== Admin Bypass Status ===");
+        sendMessage(sender, "§7Permission: §e" + com.api_d.hungerGames.kits.Kit.ADMIN_BYPASS_PERMISSION);
+        
+        // Check online players for bypass permission
+        int bypassCount = 0;
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (player.hasPermission(com.api_d.hungerGames.kits.Kit.ADMIN_BYPASS_PERMISSION)) {
+                sendMessage(sender, "§a✓ " + player.getName() + " §7has admin bypass permission");
+                bypassCount++;
+            }
+        }
+        
+        if (bypassCount == 0) {
+            sendMessage(sender, "§7No online players have admin bypass permission");
+        } else {
+            sendMessage(sender, "§7Total players with bypass: §e" + bypassCount);
+        }
+        
+        return true;
+    }
+    
+    /**
      * Show help information
      */
     private void showHelp(CommandSender sender) {
@@ -480,6 +509,7 @@ public class AdminCommand extends BaseCommand implements TabCompleter {
         sendMessage(sender, "§e/hgadmin end §7- Force end the game");
         sendMessage(sender, "§e/hgadmin debug §7- Show debug information about the game state");
         sendMessage(sender, "§e/hgadmin debuglootchest <spawn|feast> §7- Create and fill a chest with loot on top of the block you're looking at");
+        sendMessage(sender, "§e/hgadmin bypass §7- Show players with admin bypass permissions");
         sendMessage(sender, "");
         sendMessage(sender, "§eAvailable states: WAITING, STARTING, ACTIVE, FEAST, BORDER_SHRINKING, FINAL_FIGHT, ENDING, FINISHED");
     }
@@ -493,7 +523,7 @@ public class AdminCommand extends BaseCommand implements TabCompleter {
             String partial = args[0].toLowerCase();
             List<String> subCommands = Arrays.asList(
                 "start", "next", "state", "cancel", "reload", "status",
-                "forcepvp", "forcefeast", "forceborder", "forcefinal", "end", "debug", "debuglootchest"
+                "forcepvp", "forcefeast", "forceborder", "forcefinal", "end", "debug", "debuglootchest", "bypass"
             );
             
             for (String subCommand : subCommands) {

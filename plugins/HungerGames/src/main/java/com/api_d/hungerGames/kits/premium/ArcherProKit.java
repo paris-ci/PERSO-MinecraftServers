@@ -15,7 +15,7 @@ import java.util.List;
 public class ArcherProKit extends Kit {
     
     public ArcherProKit() {
-        super("archer_pro", "Archer Pro", "Explosive arrows and advanced archery, costs 1000 credits", 
+        super("archer_pro", "Archer Pro", "Explosive arrows that explode on impact! Advanced archery, costs 1000 credits", 
               true, 1000, Material.BOW);
     }
     
@@ -23,7 +23,7 @@ public class ArcherProKit extends Kit {
     public List<ItemStack> getStartingItems() {
         return Arrays.asList(
             new ItemStack(Material.BOW),
-            new ItemStack(Material.ARROW, 15),
+            new ItemStack(Material.ARROW, 32), // More arrows since they explode
             new ItemStack(Material.FLINT_AND_STEEL)
         );
     }
@@ -37,9 +37,10 @@ public class ArcherProKit extends Kit {
     
     @Override
     protected void applySpecialEffects(Player player) {
-        // The explosive arrow effect and spectator collision need to be handled
-        // by the game mechanics system through event listeners
-        // This would be implemented in the main game manager
+        // The explosive arrow effect is handled by the main plugin's ProjectileHitEvent
+        // All arrows shot by players with this kit will explode on impact
+        player.sendMessage("§a§l[Archer Pro] §7Your arrows will now explode on impact!");
+        player.sendMessage("§a§l[Archer Pro] §7You have 32 explosive arrows - use them wisely!");
     }
     
     @Override

@@ -35,7 +35,7 @@ world:
   # Minimum world border size (blocks)
   world_border_minimum_size: 30
   # World border shrinking speed (blocks per second)
-  world_border_shrink_speed: 0.5
+  world_border_shrink_speed: 4.0
 
 # Protection settings
 protection:

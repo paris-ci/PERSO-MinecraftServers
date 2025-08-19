@@ -225,6 +225,11 @@ public class KitSelectionGUI implements Listener {
             return;
         }
         
+        // Show admin bypass message if applicable
+        if (clickedKit.isPremium() && !clickedKit.shouldPlayerPay(player)) {
+            player.sendMessage(Component.text("§a§l[Admin] §7Kit cost bypassed due to admin permissions!", NamedTextColor.GREEN));
+        }
+        
         // Check if it's already selected
         Kit currentKit = plugin.getKitManager().getPlayerKit(player);
         if (clickedKit.equals(currentKit)) {
@@ -283,7 +288,22 @@ public class KitSelectionGUI implements Listener {
         
         List<Component> confirmLore = new ArrayList<>();
         confirmLore.add(Component.text("§7Click to purchase"));
-        confirmLore.add(Component.text("§7" + kit.getDisplayName() + " §7for §e" + kit.getCost() + " §7credits"));
+        
+        // Check if admin bypass is active
+        if (!kit.shouldPlayerPay(player)) {
+            confirmLore.add(Component.text("§a§l[ADMIN BYPASS] §7Cost: §e" + kit.getCost() + " §7credits §7(§aFREE§7)"));
+        } else {
+            confirmLore.add(Component.text("§7" + kit.getDisplayName() + " §7for §e" + kit.getCost() + " §7credits"));
+        }
+        
+        // Show effective cost
+        int effectiveCost = kit.getEffectiveCost(player);
+        if (effectiveCost == 0) {
+            confirmLore.add(Component.text("§a§l[FREE] §7No credits will be deducted"));
+        } else {
+            confirmLore.add(Component.text("§7You will pay: §e" + effectiveCost + " §7credits"));
+        }
+        
         confirmMeta.lore(confirmLore);
         confirmItem.setItemMeta(confirmMeta);
         confirmInventory.setItem(11, confirmItem);
@@ -348,16 +368,20 @@ public class KitSelectionGUI implements Listener {
             return;
         }
         
-        // Deduct credits if premium kit
-        if (kit.isPremium()) {
+        // Deduct credits if premium kit and player should pay
+        if (kit.isPremium() && kit.shouldPlayerPay(player)) {
             plugin.getPlayerManager().deductCredits(player.getUniqueId(), kit.getCost(), "Purchased " + kit.getDisplayName() + " kit");
         }
         
         // Select the kit
         plugin.getKitManager().setPlayerKit(player, kit.getId());
         
-        // Send success message
-        player.sendMessage(Component.text("Successfully selected " + kit.getDisplayName() + " kit!", NamedTextColor.GREEN));
+        // Send success message with admin bypass info if applicable
+        if (kit.isPremium() && !kit.shouldPlayerPay(player)) {
+            player.sendMessage(Component.text("§a§l[Admin Bypass] §7Kit " + kit.getDisplayName() + " selected for FREE!", NamedTextColor.GREEN));
+        } else {
+            player.sendMessage(Component.text("Successfully selected " + kit.getDisplayName() + " kit!", NamedTextColor.GREEN));
+        }
         
         // Close inventory
         player.closeInventory();

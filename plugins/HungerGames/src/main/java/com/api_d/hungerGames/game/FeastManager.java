@@ -41,6 +41,20 @@ public class FeastManager {
             return;
         }
         
+        // Don't start reminders if feast has already spawned
+        if (feastSpawned) {
+            logger.info("Feast already spawned, not starting reminders");
+            return;
+        }
+        
+        // Cancel any existing reminder task to prevent duplicates
+        if (feastReminderTask != null) {
+            feastReminderTask.cancel();
+            logger.info("Cancelled existing feast reminder task");
+        }
+        
+        logger.info("Starting feast reminder task");
+        
         // Send reminders every 2 minutes
         feastReminderTask = new BukkitRunnable() {
             int timeUntilFeast = config.getFeastAppearsAfter();
@@ -49,6 +63,8 @@ public class FeastManager {
             public void run() {
                 if (feastSpawned) {
                     this.cancel();
+                    feastReminderTask = null;
+                    logger.info("Feast reminder task cancelled - feast spawned");
                     return;
                 }
                 
@@ -56,11 +72,10 @@ public class FeastManager {
                 
                 if (timeUntilFeast > 0) {
                     int minutes = timeUntilFeast / 60;
-                    int seconds = timeUntilFeast % 60;
-                    String timeString = String.format("%d:%02d", minutes, seconds);
                     
+                    logger.info("Sending feast reminder: " + minutes + " minutes remaining");
                     plugin.getServer().broadcast(
-                        net.kyori.adventure.text.Component.text(config.getMessage("feast_spawning", "minutes", timeString))
+                        net.kyori.adventure.text.Component.text(config.getMessage("feast_spawning", "minutes", String.valueOf(minutes)))
                     );
                 }
             }
@@ -91,6 +106,8 @@ public class FeastManager {
             // Cancel reminder task
             if (feastReminderTask != null) {
                 feastReminderTask.cancel();
+                feastReminderTask = null;
+                logger.info("Feast reminder task cancelled after feast spawned");
             }
             
             // Broadcast feast location
@@ -131,6 +148,8 @@ public class FeastManager {
     public void cleanup() {
         if (feastReminderTask != null) {
             feastReminderTask.cancel();
+            feastReminderTask = null;
+            logger.info("Feast reminder task cleaned up");
         }
     }
     
@@ -141,5 +160,6 @@ public class FeastManager {
         feastSpawned = false;
         feastLocation = null;
         cleanup();
+        logger.info("Feast state reset");
     }
 }
