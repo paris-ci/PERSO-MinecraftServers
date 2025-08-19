@@ -5,6 +5,7 @@ import com.api_d.hungerGames.commands.KitCommand;
 import com.api_d.hungerGames.config.GameConfig;
 import com.api_d.hungerGames.database.DatabaseManager;
 import com.api_d.hungerGames.game.GameManager;
+import com.api_d.hungerGames.game.GameState;
 import com.api_d.hungerGames.kits.KitManager;
 import com.api_d.hungerGames.player.PlayerManager;
 import com.api_d.hungerGames.world.PlatformGenerator;
@@ -45,11 +46,11 @@ public final class HungerGames extends JavaPlugin implements Listener {
             initializeEventListeners();
             initializeCommands();
             
-            // Set up the world and start the game
+            // Set up the world
             initializeWorld();
             
-            // Start the game
-            startGame();
+            // Don't start the game automatically - wait for players to join
+            getLogger().info("Plugin initialized. Waiting for players to join before starting game...");
             
             initialized = true;
             getLogger().info("HungerGames plugin enabled successfully!");
@@ -160,6 +161,42 @@ public final class HungerGames extends JavaPlugin implements Listener {
         getLogger().info("Starting Hunger Games match...");
         gameManager.initializeGame();
     }
+    
+    /**
+     * Check if we should start the game and start it if conditions are met
+     */
+    private void checkAndStartGame() {
+        // Only start the game if it hasn't been started yet
+        if (!gameManager.isGameRunning()) {
+            int onlinePlayers = Bukkit.getOnlinePlayers().size();
+            getLogger().info("Player joined. Online players: " + onlinePlayers);
+            
+            // Start the game when the first player joins
+            if (onlinePlayers >= 1) {
+                getLogger().info("First player joined. Starting Hunger Games match...");
+                startGame();
+            }
+        }
+    }
+    
+    /**
+     * Check if we should cancel the game due to insufficient players
+     */
+    private void checkAndCancelGame() {
+        if (gameManager.isGameRunning()) {
+            GameState currentState = gameManager.getCurrentState();
+            if (currentState.canPlayersJoin()) {
+                int onlinePlayers = Bukkit.getOnlinePlayers().size();
+                getLogger().info("Player left. Online players: " + onlinePlayers);
+                
+                // If we have less than 2 players and the game is still in waiting state, cancel it
+                if (onlinePlayers < 2) {
+                    getLogger().info("Not enough players to continue. Cancelling game...");
+                    gameManager.cancelGame();
+                }
+            }
+        }
+    }
 
     @Override
     public void onDisable() {
@@ -203,6 +240,9 @@ public final class HungerGames extends JavaPlugin implements Listener {
                 }
             });
             
+            // Check if we should start the game
+            checkAndStartGame();
+            
             // Set custom join message
             event.setJoinMessage(config.getPrefix() + "§e" + event.getPlayer().getName() + " joined the Hunger Games!");
             
@@ -228,6 +268,9 @@ public final class HungerGames extends JavaPlugin implements Listener {
             
             // Unload player data
             playerManager.unloadPlayer(event.getPlayer().getUniqueId());
+            
+            // Check if we should cancel the game due to insufficient players
+            checkAndCancelGame();
             
             // Set custom quit message
             event.setQuitMessage(config.getPrefix() + "§7" + event.getPlayer().getName() + " left the Hunger Games!");

@@ -74,6 +74,13 @@ public class GameStateMachine {
     }
     
     /**
+     * Check if the state machine is in its initial state (no game active)
+     */
+    public boolean isInitialState() {
+        return currentState == null;
+    }
+    
+    /**
      * Attempt to transition to a new state
      * @param newState The state to transition to
      * @return true if the transition was successful, false otherwise
@@ -145,6 +152,18 @@ public class GameStateMachine {
         // Still fire the event
         GameStateChangeEvent event = new GameStateChangeEvent(previousState, newState);
         Bukkit.getPluginManager().callEvent(event);
+    }
+    
+    /**
+     * Reset the state machine to initial state
+     */
+    public void reset() {
+        GameState previousState = currentState;
+        currentState = null;
+        
+        if (logStateChanges) {
+            logger.info("Game state machine reset from: " + (previousState != null ? previousState.getDisplayName() : "null"));
+        }
     }
     
     /**

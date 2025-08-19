@@ -76,6 +76,12 @@ public class GameManager implements Listener {
      * Initialize a new game
      */
     public void initializeGame() {
+        // Prevent starting multiple games
+        if (currentGame != null || stateMachine.getCurrentState() != null) {
+            logger.warning("Game is already running. Cannot initialize new game.");
+            return;
+        }
+        
         logger.info("Initializing new Hunger Games match...");
         
         try {
@@ -155,16 +161,36 @@ public class GameManager implements Listener {
      * Start the waiting phase
      */
     private void startWaitingPhase() {
+        logger.info("Starting waiting phase. Max wait time: " + config.getMaxWaitTime() + " seconds");
+        
         // Schedule game start if we have enough players or time runs out
         gameStartTask = new BukkitRunnable() {
             int timeLeft = config.getMaxWaitTime();
             
             @Override
             public void run() {
-                if (shouldStartGame() || timeLeft <= 0) {
-                    startGame();
-                    this.cancel();
-                    return;
+                int onlinePlayers = Bukkit.getOnlinePlayers().size();
+                boolean shouldStart = shouldStartGame();
+                
+                if (shouldStart || timeLeft <= 0) {
+                    if (timeLeft <= 0) {
+                        logger.info("Max wait time reached (" + config.getMaxWaitTime() + "s). Checking if we can start game...");
+                        // Even if time runs out, we still need at least 2 players
+                        if (onlinePlayers >= 2) {
+                            logger.info("Starting game with " + onlinePlayers + " players after max wait time.");
+                            startGame();
+                            this.cancel();
+                            return;
+                        } else {
+                            logger.info("Max wait time reached but only " + onlinePlayers + " players. Waiting for more players...");
+                            timeLeft = 30; // Reset timer to wait another 30 seconds
+                        }
+                    } else {
+                        logger.info("Game start conditions met. Starting game with " + onlinePlayers + " players.");
+                        startGame();
+                        this.cancel();
+                        return;
+                    }
                 }
                 
                 if (timeLeft % 30 == 0 || timeLeft <= 10) {
@@ -183,14 +209,29 @@ public class GameManager implements Listener {
         int onlinePlayers = Bukkit.getOnlinePlayers().size();
         int maxPlayers = Bukkit.getMaxPlayers();
         
-        // Start if server is full or we have at least 2 players and someone is ready
-        return onlinePlayers >= maxPlayers || (onlinePlayers >= 2 && allPlayersReady());
+        // Don't start if we have less than 2 players
+        if (onlinePlayers < 2) {
+            logger.info("Not enough players to start game. Need at least 2, have " + onlinePlayers);
+            return false;
+        }
+        
+        // Start if server is full or we have at least 2 players and all are ready
+        boolean shouldStart = onlinePlayers >= maxPlayers || allPlayersReady();
+        logger.info("Game start check: " + onlinePlayers + " players, max: " + maxPlayers + ", all ready: " + allPlayersReady() + ", should start: " + shouldStart);
+        return shouldStart;
     }
     
     /**
      * Check if all online players have selected kits
      */
     private boolean allPlayersReady() {
+        int onlinePlayers = Bukkit.getOnlinePlayers().size();
+        
+        // If no players are online, they can't be ready
+        if (onlinePlayers == 0) {
+            return false;
+        }
+        
         return Bukkit.getOnlinePlayers().stream()
             .allMatch(kitManager::hasPlayerSelectedKit);
     }
@@ -199,14 +240,29 @@ public class GameManager implements Listener {
      * Start the game
      */
     public void startGame() {
+        int onlinePlayers = Bukkit.getOnlinePlayers().size();
+        
+        // Additional safety check - don't start with less than 2 players
+        if (onlinePlayers < 2) {
+            logger.warning("Attempted to start game with only " + onlinePlayers + " players. Minimum required: 2. Aborting game start.");
+            return;
+        }
+        
+        // Additional check to prevent starting if game is already running
+        if (currentGame != null && stateMachine.getCurrentState() != null) {
+            logger.warning("Game is already running. Cannot start another game.");
+            return;
+        }
+        
         if (!stateMachine.transitionTo(GameState.STARTING, "Starting game")) {
             return;
         }
         
-        logger.info("Starting Hunger Games with " + Bukkit.getOnlinePlayers().size() + " players");
+        logger.info("Starting Hunger Games with " + onlinePlayers + " players");
         
         // Cancel waiting task
         if (gameStartTask != null) {
+            gameStartTime = System.currentTimeMillis();
             gameStartTask.cancel();
         }
         
@@ -555,6 +611,42 @@ public class GameManager implements Listener {
     }
     
     /**
+     * Cancel the current game (e.g., due to insufficient players)
+     */
+    public void cancelGame() {
+        logger.info("Cancelling game due to insufficient players...");
+        
+        // Cancel all tasks
+        cancelAllTasks();
+        
+        // Reset game state
+        if (currentGame != null) {
+            try {
+                // Mark game as cancelled in database
+                String query = "UPDATE games SET ended_at = CURRENT_TIMESTAMP WHERE id = ?";
+                databaseManager.execute(query, currentGame.getId());
+                currentGame.setEndedAt(new Timestamp(System.currentTimeMillis()));
+            } catch (SQLException e) {
+                logger.log(Level.SEVERE, "Failed to update cancelled game in database", e);
+            }
+        }
+        
+        // Reset game state
+        currentGame = null;
+        alivePlayers.clear();
+        deadPlayers.clear();
+        playerParties.clear();
+        playerSurvivalTimes.clear();
+        pvpEnabled = false;
+        feastSpawned = false;
+        
+        // Reset state machine
+        stateMachine.reset();
+        
+        logger.info("Game cancelled successfully");
+    }
+    
+    /**
      * End the game
      */
     public void endGame() {
@@ -637,6 +729,10 @@ public class GameManager implements Listener {
     // Getters
     public GameState getCurrentState() {
         return stateMachine.getCurrentState();
+    }
+    
+    public boolean isGameRunning() {
+        return currentGame != null && stateMachine.getCurrentState() != null;
     }
     
     public boolean isPvpEnabled() {
