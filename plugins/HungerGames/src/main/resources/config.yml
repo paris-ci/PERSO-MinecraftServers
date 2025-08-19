@@ -1,0 +1,127 @@
+# HungerGames Plugin Configuration
+
+# Database settings
+database:
+  host: "postgres"
+  port: 5432
+  database: "minecraft"
+  username: "postgres"
+  password: "postgres"
+
+# Server identification
+server:
+  # Unique server identifier for multi-server setups
+  server_id: "hungergames-1"
+
+# Game timing settings (all times in seconds unless specified)
+timing:
+  # Maximum time to wait for players before starting (seconds)
+  max_wait_time: 300
+  # Time players are frozen at spawn before game starts (seconds)
+  spawn_teleport_delay: 10
+  # Delay before PvP is enabled after game start (seconds)
+  pvp_delay: 30
+  # Time after PvP when feast spawns (seconds)
+  feast_appears_after: 600
+  # Maximum game duration before poison effects start (minutes)
+  max_game_time: 45
+
+# World generation settings
+world:
+  # Spawn platform settings
+  spawn_radius: 15
+  # Initial world border size (blocks)
+  world_border_initial_size: 1000
+  # Minimum world border size (blocks)
+  world_border_minimum_size: 30
+  # World border shrinking speed (blocks per second)
+  world_border_shrink_speed: 0.5
+
+# Feast settings
+feast:
+  # Whether feast is enabled
+  enabled: true
+  # Feast platform radius
+  radius: 10
+  # Minimum distance from world border
+  border_distance: 50
+
+# Party settings
+party:
+  # Maximum party size (4 recommended)
+  maximum_party_size: 4
+  # Whether teams mode is enabled
+  teams_enabled: true
+
+# Platform generation settings
+platforms:
+  # Use schematic files instead of generated platforms
+  use_schematics: false
+  # Schematic file paths (relative to plugin folder)
+  spawn_schematic_file: "schematics/spawn.schem"
+  feast_schematic_file: "schematics/feast.schem"
+
+# Loot tables configuration
+loot:
+  # Items for spawn platform chests
+  spawn_items:
+    - "WOODEN_SWORD:1"
+    - "BREAD:3"
+    - "LEATHER_HELMET:1"
+    - "ARROW:16"
+    - "APPLE:2"
+    - "STONE_AXE:1"
+  
+  # Items for feast platform chests
+  feast_items:
+    - "IRON_SWORD:1"
+    - "IRON_HELMET:1"
+    - "COOKED_BEEF:5"
+    - "BOW:1"
+    - "ARROW:32"
+    - "GOLDEN_APPLE:2"
+    - "POTION:1"
+    - "DIAMOND:3"
+
+# Credit rewards configuration
+credits:
+  # Credits awarded for various actions
+  game_started: 3
+  survived_one_minute: 1
+  kill_player: 50
+  party_member_kill: 25
+  game_won_large: 500  # 4+ teams
+  game_won_small: 100  # <4 teams
+  afk_penalty: -30
+  poison_damage_penalty: -50
+
+# Kit costs (for premium kits)
+kit_costs:
+  berserker: 150
+  wizard: 200
+  builder: 50
+  spawner: 500
+  archer_pro: 1000
+
+# Messages configuration
+messages:
+  prefix: "&8[&cHG&8] "
+  game_starting_soon: "&eGame starting in {seconds} seconds!"
+  pvp_enabled: "&cPvP is now enabled!"
+  feast_spawning: "&6The feast will spawn in {minutes} minutes!"
+  feast_spawned: "&6The feast has spawned at X: {x}, Z: {z}!"
+  border_shrinking: "&eThe world border is now shrinking!"
+  game_ended: "&aGame ended! Winner(s): {winners}"
+  spectator_mode: "&7You are now in spectator mode."
+  insufficient_credits: "&cYou don't have enough credits for this kit!"
+  kit_selected: "&aYou have selected the {kit} kit!"
+  credits_balance: "&eYou have &a{credits} &ecredits."
+
+# Debug settings
+debug:
+  # Enable verbose logging
+  verbose_logging: false
+  # Log all state transitions
+  log_state_changes: true
+  # Log database operations
+  log_database_operations: false
