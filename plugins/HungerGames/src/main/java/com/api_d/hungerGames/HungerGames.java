@@ -4,6 +4,7 @@ import com.api_d.hungerGames.commands.CreditsCommand;
 import com.api_d.hungerGames.commands.KitCommand;
 import com.api_d.hungerGames.commands.CompassCommand;
 import com.api_d.hungerGames.commands.SpectateCommand;
+import com.api_d.hungerGames.commands.AdminCommand;
 import com.api_d.hungerGames.config.GameConfig;
 import com.api_d.hungerGames.database.DatabaseManager;
 import com.api_d.hungerGames.game.GameManager;
@@ -18,7 +19,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
-import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 import java.util.logging.Level;
 
@@ -145,9 +146,15 @@ public final class HungerGames extends JavaPlugin implements Listener {
         
         // Register commands
         getCommand("credits").setExecutor(new CreditsCommand(this));
+        getCommand("credits").setTabCompleter(new CreditsCommand(this));
         getCommand("kit").setExecutor(new KitCommand(this));
+        getCommand("kit").setTabCompleter(new KitCommand(this));
         getCommand("compass").setExecutor(new CompassCommand(this));
+        getCommand("compass").setTabCompleter(new CompassCommand(this));
         getCommand("spectate").setExecutor(new SpectateCommand(this));
+        getCommand("spectate").setTabCompleter(new SpectateCommand(this));
+        getCommand("admin").setExecutor(new AdminCommand(this));
+        getCommand("admin").setTabCompleter(new AdminCommand(this));
         
         hgLogger.info("Commands registered");
     }
@@ -256,7 +263,13 @@ public final class HungerGames extends JavaPlugin implements Listener {
             checkAndStartGame();
             
             // Set custom join message - using modern API
-            event.joinMessage(Component.text(config.getPrefix() + "§e" + event.getPlayer().getName() + " joined the Hunger Games!"));
+            String joinMessage = config.getPrefix() + "§e" + event.getPlayer().getName() + " joined the Hunger Games!";
+            event.joinMessage(LegacyComponentSerializer.legacySection().deserialize(joinMessage));
+            
+            // Update player flight and game mode through protection manager
+            if (gameManager != null) {
+                gameManager.getProtectionManager().updateAllPlayersFlight();
+            }
             
         } catch (Exception e) {
             hgLogger.log(Level.SEVERE, "Error handling player join: " + event.getPlayer().getName(), e);
@@ -285,7 +298,8 @@ public final class HungerGames extends JavaPlugin implements Listener {
             checkAndCancelGame();
             
             // Set custom quit message - using modern API
-            event.quitMessage(Component.text(config.getPrefix() + "§7" + event.getPlayer().getName() + " left the Hunger Games!"));
+            String quitMessage = config.getPrefix() + "§7" + event.getPlayer().getName() + " left the Hunger Games!";
+            event.quitMessage(LegacyComponentSerializer.legacySection().deserialize(quitMessage));
             
         } catch (Exception e) {
             hgLogger.log(Level.SEVERE, "Error handling player quit: " + event.getPlayer().getName(), e);

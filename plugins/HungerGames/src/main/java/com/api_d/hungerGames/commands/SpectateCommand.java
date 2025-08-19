@@ -6,12 +6,18 @@ import com.api_d.hungerGames.game.SpectatorManager;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Command to teleport to another player (spectators only)
  */
-public class SpectateCommand extends BaseCommand {
+public class SpectateCommand extends BaseCommand implements TabCompleter {
     
     public SpectateCommand(HungerGames plugin) {
         super(plugin);
@@ -76,5 +82,28 @@ public class SpectateCommand extends BaseCommand {
         player.sendMessage("§6Spectate Command Usage:");
         player.sendMessage("§7/spectate <player>");
         player.sendMessage("§7Teleport to another player's location");
+    }
+    
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        List<String> completions = new ArrayList<>();
+        
+        if (args.length == 1) {
+            // Tab complete player names (only alive players)
+            String partial = args[0].toLowerCase();
+            GameManager gameManager = plugin.getGameManager();
+            
+            if (gameManager != null && gameManager.isGameRunning()) {
+                List<String> alivePlayerNames = gameManager.getAlivePlayers().stream()
+                    .map(uuid -> Bukkit.getPlayer(uuid))
+                    .filter(Objects::nonNull)
+                    .map(Player::getName)
+                    .filter(name -> name.toLowerCase().startsWith(partial))
+                    .collect(Collectors.toList());
+                completions.addAll(alivePlayerNames);
+            }
+        }
+        
+        return completions;
     }
 }

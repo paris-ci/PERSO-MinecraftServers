@@ -2,21 +2,31 @@ package com.api_d.hungerGames.commands;
 
 import com.api_d.hungerGames.HungerGames;
 import com.api_d.hungerGames.events.KitSelectionEvent;
+import com.api_d.hungerGames.gui.KitSelectionGUI;
 import com.api_d.hungerGames.kits.Kit;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 /**
  * Command for managing kit selection
  */
-public class KitCommand extends BaseCommand {
+public class KitCommand extends BaseCommand implements TabCompleter {
+    
+    private final KitSelectionGUI kitSelectionGUI;
     
     public KitCommand(HungerGames plugin) {
         super(plugin);
+        this.kitSelectionGUI = new KitSelectionGUI(plugin);
+        this.kitSelectionGUI.initialize();
     }
     
     @Override
@@ -27,8 +37,8 @@ public class KitCommand extends BaseCommand {
         if (!checkPermission(sender, "hungergames.kit")) return true;
         
         if (args.length == 0) {
-            // Show current kit and available kits
-            showKitInformation(player);
+            // Open the kit selection GUI
+            kitSelectionGUI.openKitSelection(player);
             return true;
         }
         
@@ -41,7 +51,6 @@ public class KitCommand extends BaseCommand {
             
             if (kit == null) {
                 sender.sendMessage(Component.text("Unknown kit: " + args[0], NamedTextColor.RED));
-                showAvailableKits(player);
                 return true;
             }
             
@@ -88,41 +97,22 @@ public class KitCommand extends BaseCommand {
         return true;
     }
     
-    /**
-     * Show current kit and kit information
-     */
-    private void showKitInformation(Player player) {
-        Kit currentKit = plugin.getKitManager().getPlayerKit(player);
-        int playerCredits = plugin.getPlayerManager().getPlayerCredits(player);
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        List<String> completions = new ArrayList<>();
         
-        sendMessage(player, "&eYour current kit: &a" + currentKit.getDisplayName());
-        sendMessage(player, "&eYour credits: &a" + playerCredits);
-        sendMessage(player, "");
-        sendMessage(player, "&eAvailable kits:");
+        if (args.length == 1) {
+            // Tab complete kit names
+            String partial = args[0].toLowerCase();
+            List<String> kitNames = plugin.getKitManager().getAllKits().stream()
+                .map(Kit::getId)
+                .filter(id -> id.toLowerCase().startsWith(partial))
+                .collect(Collectors.toList());
+            completions.addAll(kitNames);
+        }
         
-        showAvailableKits(player);
+        return completions;
     }
     
-    /**
-     * Show list of available kits
-     */
-    private void showAvailableKits(Player player) {
-        int playerCredits = plugin.getPlayerManager().getPlayerCredits(player);
-        
-        sendMessage(player, "&6Default Kits (Free):");
-        for (Kit kit : plugin.getKitManager().getDefaultKits()) {
-            sendMessage(player, "  &a" + kit.getId() + " &7- " + kit.getDescription());
-        }
-        
-        sendMessage(player, "");
-        sendMessage(player, "&6Premium Kits:");
-        for (Kit kit : plugin.getKitManager().getPremiumKits()) {
-            boolean canAfford = kit.canPlayerUse(player, playerCredits);
-            
-            sendMessage(player, "  " + "&" + (canAfford ? "a" : "c") + kit.getId() + " &7(" + kit.getCost() + " credits) - " + kit.getDescription());
-        }
-        
-        sendMessage(player, "");
-        sendMessage(player, "&eUse &a/kit <kit_name> &eto select a kit!");
-    }
+
 }

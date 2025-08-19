@@ -30,13 +30,7 @@ public class KitManager {
         return manager;
     }
     
-    /**
-     * Initialize all kits after construction
-     */
-    private void initializeKits() {
-        registerDefaultKits();
-        registerPremiumKits();
-    }
+
     
     /**
      * Register all default (free) kits

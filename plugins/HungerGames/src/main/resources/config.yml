@@ -37,6 +37,17 @@ world:
   # World border shrinking speed (blocks per second)
   world_border_shrink_speed: 0.5
 
+# Protection settings
+protection:
+  # Force daytime when game isn't started
+  forced_daytime: true
+  # Block world interaction (chests, blocks) when game isn't started
+  block_world_interaction: true
+  # Prevent mobs from targeting players when game isn't started
+  block_mob_targeting: true
+  # Enable flight for players when waiting for game to start
+  enable_flight_waiting: true
+
 # Feast settings
 feast:
   # Whether feast is enabled
@@ -105,17 +116,17 @@ kit_costs:
 
 # Messages configuration
 messages:
-  prefix: "&8[&cHG&8] "
-  game_starting_soon: "&eGame starting in {seconds} seconds!"
-  pvp_enabled: "&cPvP is now enabled!"
-  feast_spawning: "&6The feast will spawn in {minutes} minutes!"
-  feast_spawned: "&6The feast has spawned at X: {x}, Z: {z}!"
-  border_shrinking: "&eThe world border is now shrinking!"
-  game_ended: "&aGame ended! Winner(s): {winners}"
-  spectator_mode: "&7You are now in spectator mode."
-  insufficient_credits: "&cYou don't have enough credits for this kit!"
-  kit_selected: "&aYou have selected the {kit} kit!"
-  credits_balance: "&eYou have &a{credits} &ecredits."
+  prefix: "§8[§cHG§8] "
+  game_starting_soon: "§eGame starting in {seconds} seconds!"
+  pvp_enabled: "§cPvP is now enabled!"
+  feast_spawning: "§6The feast will spawn in {minutes} minutes!"
+  feast_spawned: "§6The feast has spawned at X: {x}, Z: {z}!"
+  border_shrinking: "§eThe world border is now shrinking!"
+  game_ended: "§aGame ended! Winner(s): {winners}"
+  spectator_mode: "§7You are now in spectator mode."
+  insufficient_credits: "§cYou don't have enough credits for this kit!"
+  kit_selected: "§aYou have selected the {kit} kit!"
+  credits_balance: "§eYou have §a{credits} §ecredits."
 
 # Debug settings
 debug:

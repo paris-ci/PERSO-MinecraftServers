@@ -79,7 +79,7 @@ public abstract class BaseCommand implements CommandExecutor {
      */
     protected void sendMessage(CommandSender sender, String message) {
         String prefixedMessage = plugin.getGameConfig().getPrefix() + message;
-        Component component = LegacyComponentSerializer.legacyAmpersand().deserialize(prefixedMessage);
+        Component component = LegacyComponentSerializer.legacySection().deserialize(prefixedMessage);
         sender.sendMessage(component);
     }
     

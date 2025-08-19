@@ -49,6 +49,7 @@ public class GameManager implements Listener {
     private final BorderManager borderManager;
     private final FinalFightManager finalFightManager;
     private final SpectatorManager spectatorManager;
+    private GameProtectionManager protectionManager;
     
     // Game state
     private Game currentGame;
@@ -89,6 +90,8 @@ public class GameManager implements Listener {
         this.borderManager = new BorderManager(plugin, config);
         this.finalFightManager = new FinalFightManager(plugin, alivePlayers);
         this.spectatorManager = new SpectatorManager((HungerGames) plugin, config, kitManager);
+        // Initialize protection manager after construction to avoid this-escape
+        this.protectionManager = null;
     }
     
     /**
@@ -98,6 +101,7 @@ public class GameManager implements Listener {
                                    PlayerManager playerManager, KitManager kitManager) {
         GameManager manager = new GameManager(plugin, config, databaseManager, playerManager, kitManager);
         manager.initializeEventListeners();
+        manager.initializeProtectionManager();
         return manager;
     }
     
@@ -107,6 +111,14 @@ public class GameManager implements Listener {
     private void initializeEventListeners() {
         // Register event listeners
         Bukkit.getPluginManager().registerEvents(this, plugin);
+    }
+    
+    /**
+     * Initialize protection manager after construction to avoid this-escape
+     */
+    private void initializeProtectionManager() {
+        this.protectionManager = new GameProtectionManager((HungerGames) plugin, config, this);
+        this.protectionManager.initialize();
     }
     
     /**
@@ -810,6 +822,7 @@ public class GameManager implements Listener {
         borderManager.cleanup();
         finalFightManager.cleanup();
         spectatorManager.cleanup();
+        protectionManager.cleanup();
     }
     
     /**
@@ -817,7 +830,7 @@ public class GameManager implements Listener {
      */
     private void broadcastMessage(String message) {
         String prefixedMessage = config.getPrefix() + message;
-        Component component = LegacyComponentSerializer.legacyAmpersand().deserialize(prefixedMessage);
+        Component component = LegacyComponentSerializer.legacySection().deserialize(prefixedMessage);
         Bukkit.broadcast(component);
     }
     
@@ -825,6 +838,15 @@ public class GameManager implements Listener {
     @EventHandler
     public void onGameStateChange(GameStateChangeEvent event) {
         logger.info("Game state changed: " + event.getPreviousState() + " -> " + event.getNewState());
+        
+        // Update protection features based on game state
+        if (event.getNewState().isGameActive()) {
+            // Game is now active, disable protection features
+            protectionManager.updateAllPlayersFlight();
+        } else {
+            // Game is not active, enable protection features
+            protectionManager.updateAllPlayersFlight();
+        }
     }
     
     /**
@@ -900,5 +922,125 @@ public class GameManager implements Listener {
      */
     public SpectatorManager getSpectatorManager() {
         return spectatorManager;
+    }
+
+    /**
+     * Get the protection manager
+     */
+    public GameProtectionManager getProtectionManager() {
+        return protectionManager;
+    }
+    
+    // Admin force methods
+    
+    /**
+     * Force transition to a specific game state
+     */
+    public void forceStateTransition(GameState targetState) {
+        if (currentGame == null) {
+            logger.warning("Cannot force state transition: no game running");
+            return;
+        }
+        
+        logger.info("Admin forcing state transition to: " + targetState.getDisplayName());
+        stateMachine.transitionTo(targetState, "Admin forced transition");
+        
+        // The state machine will handle the transition logic
+    }
+    
+    /**
+     * Force enable PvP
+     */
+    public void forceEnablePvp() {
+        if (!pvpEnabled) {
+            pvpEnabled = true;
+            logger.info("Admin force enabled PvP");
+            
+            // Cancel any existing PvP task
+            if (pvpEnableTask != null) {
+                pvpEnableTask.cancel();
+            }
+            
+            // Broadcast PvP enabled
+            broadcastMessage("§cPvP is now enabled!");
+        }
+    }
+    
+    /**
+     * Force spawn feast
+     */
+    public void forceSpawnFeast() {
+        if (!feastSpawned) {
+            feastSpawned = true;
+            logger.info("Admin force spawned feast");
+            
+            // Cancel any existing feast task
+            if (feastSpawnTask != null) {
+                feastSpawnTask.cancel();
+            }
+            
+            // Spawn feast immediately
+            World world = Bukkit.getWorlds().get(0);
+            feastManager.spawnFeast(world, spawnLocation);
+            
+            // Broadcast feast spawned
+            Location feastLoc = feastManager.getFeastLocation();
+            if (feastLoc != null) {
+                broadcastMessage("§6The feast has spawned at X: " + feastLoc.getBlockX() + ", Z: " + feastLoc.getBlockZ() + "!");
+            } else {
+                broadcastMessage("§6The feast has spawned!");
+            }
+        }
+    }
+    
+    /**
+     * Force start border shrinking
+     */
+    public void forceStartBorderShrinking() {
+        if (stateMachine.getCurrentState() == GameState.ACTIVE || 
+            stateMachine.getCurrentState() == GameState.FEAST) {
+            
+            logger.info("Admin force started border shrinking");
+            
+            // Cancel any existing border task
+            if (borderShrinkTask != null) {
+                borderShrinkTask.cancel();
+            }
+            
+            // Transition to border shrinking state
+            stateMachine.transitionTo(GameState.BORDER_SHRINKING, "Admin force started border shrinking");
+        }
+    }
+    
+    /**
+     * Force start final fight
+     */
+    public void forceStartFinalFight() {
+        if (stateMachine.getCurrentState() == GameState.BORDER_SHRINKING) {
+            logger.info("Admin force started final fight");
+            
+            // Cancel any existing final fight task
+            if (finalFightTask != null) {
+                finalFightTask.cancel();
+            }
+            
+            // Transition to final fight state
+            stateMachine.transitionTo(GameState.FINAL_FIGHT, "Admin force started final fight");
+        }
+    }
+    
+    /**
+     * Force end the game
+     */
+    public void forceEndGame() {
+        if (currentGame != null) {
+            logger.info("Admin force ending game");
+            
+            // Cancel all tasks
+            cancelAllTasks();
+            
+            // Transition to ending state
+            stateMachine.transitionTo(GameState.ENDING, "Admin force ended");
+        }
     }
 }

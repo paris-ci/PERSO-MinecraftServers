@@ -90,6 +90,23 @@ public class GameConfig {
         return config.getDouble("world.world_border_shrink_speed", 0.5);
     }
     
+    // Protection settings
+    public boolean isForcedDaytimeEnabled() {
+        return config.getBoolean("protection.forced_daytime", true);
+    }
+    
+    public boolean isWorldInteractionBlocked() {
+        return config.getBoolean("protection.block_world_interaction", true);
+    }
+    
+    public boolean isMobTargetingBlocked() {
+        return config.getBoolean("protection.block_mob_targeting", true);
+    }
+    
+    public boolean isFlightEnabledWhenWaiting() {
+        return config.getBoolean("protection.enable_flight_waiting", true);
+    }
+    
     // Feast settings
     public boolean isFeastEnabled() {
         return config.getBoolean("feast.enabled", true);
@@ -174,7 +191,7 @@ public class GameConfig {
     
     // Messages
     public String getPrefix() {
-        return config.getString("messages.prefix", "&8[&cHG&8] ");
+        return config.getString("messages.prefix", "§8[§cHG§8] ");
     }
     
     public String getMessage(String key) {

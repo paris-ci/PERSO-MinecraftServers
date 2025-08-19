@@ -4,14 +4,19 @@ import com.api_d.hungerGames.HungerGames;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 /**
  * Command for managing player credits
  */
-public class CreditsCommand extends BaseCommand {
+public class CreditsCommand extends BaseCommand implements TabCompleter {
     
     public CreditsCommand(HungerGames plugin) {
         super(plugin);
@@ -75,5 +80,35 @@ public class CreditsCommand extends BaseCommand {
         // Show usage
         sendUsage(sender, "/credits [player] | /credits give <player> <amount>");
         return true;
+    }
+    
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        List<String> completions = new ArrayList<>();
+        
+        if (args.length == 1) {
+            // Tab complete: player names or "give"
+            String partial = args[0].toLowerCase();
+            if ("give".startsWith(partial)) {
+                completions.add("give");
+            }
+            
+            // Add online player names
+            List<String> playerNames = Bukkit.getOnlinePlayers().stream()
+                .map(Player::getName)
+                .filter(name -> name.toLowerCase().startsWith(partial))
+                .collect(Collectors.toList());
+            completions.addAll(playerNames);
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("give")) {
+            // Tab complete player names for give command
+            String partial = args[1].toLowerCase();
+            List<String> playerNames = Bukkit.getOnlinePlayers().stream()
+                .map(Player::getName)
+                .filter(name -> name.toLowerCase().startsWith(partial))
+                .collect(Collectors.toList());
+            completions.addAll(playerNames);
+        }
+        
+        return completions;
     }
 }

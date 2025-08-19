@@ -24,6 +24,10 @@ commands:
     description: Teleport to another player (spectators only)
     usage: /<command> <player>
     aliases: [spec, tp]
+  admin:
+    description: Admin commands for managing Hunger Games
+    usage: /<command> <subcommand> [args...]
+    aliases: [hgadmin, hga]
 
 permissions:
   hungergames.*:
@@ -37,6 +41,18 @@ permissions:
       hungergames.kit.select: true
       hungergames.compass.select: true
       hungergames.spectate: true
+      hungergames.admin: true
+      hungergames.admin.start: true
+      hungergames.admin.next: true
+      hungergames.admin.state: true
+      hungergames.admin.cancel: true
+      hungergames.admin.reload: true
+      hungergames.admin.status: true
+      hungergames.admin.forcepvp: true
+      hungergames.admin.forcefeast: true
+      hungergames.admin.forceborder: true
+      hungergames.admin.forcefinal: true
+      hungergames.admin.end: true
   
   hungergames.credits:
     description: View your own credits
@@ -65,3 +81,63 @@ permissions:
   hungergames.spectate:
     description: Spectate other players
     default: true
+  
+  hungergames.admin:
+    description: Access to admin commands
+    default: op
+    children:
+      hungergames.admin.start: true
+      hungergames.admin.next: true
+      hungergames.admin.state: true
+      hungergames.admin.cancel: true
+      hungergames.admin.reload: true
+      hungergames.admin.status: true
+      hungergames.admin.forcepvp: true
+      hungergames.admin.forcefeast: true
+      hungergames.admin.forceborder: true
+      hungergames.admin.forcefinal: true
+      hungergames.admin.end: true
+  
+  hungergames.admin.start:
+    description: Force start the game
+    default: op
+  
+  hungergames.admin.next:
+    description: Proceed to next game phase
+    default: op
+  
+  hungergames.admin.state:
+    description: Set specific game state
+    default: op
+  
+  hungergames.admin.cancel:
+    description: Cancel the current game
+    default: op
+  
+  hungergames.admin.reload:
+    description: Reload configuration
+    default: op
+  
+  hungergames.admin.status:
+    description: Show game status
+    default: op
+  
+  hungergames.admin.forcepvp:
+    description: Force enable PvP
+    default: op
+  
+  hungergames.admin.forcefeast:
+    description: Force spawn feast
+    default: op
+  
+  hungergames.admin.forceborder:
+    description: Force start border shrinking
+    default: op
+  
+  hungergames.admin.forcefinal:
+    description: Force start final fight
+    default: op
+  
+  hungergames.admin.end:
+    description: Force end the game
+    default: op

@@ -5,12 +5,17 @@ import com.api_d.hungerGames.game.CompassTracker;
 import com.api_d.hungerGames.game.GameManager;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Command to change compass tracking mode
  */
-public class CompassCommand extends BaseCommand {
+public class CompassCommand extends BaseCommand implements TabCompleter {
     
     public CompassCommand(HungerGames plugin) {
         super(plugin);
@@ -80,5 +85,24 @@ public class CompassCommand extends BaseCommand {
         player.sendMessage("§8- §7feast §8- Track feast location (if spawned)");
         player.sendMessage("§8- §7party §8- Track closest party member");
         player.sendMessage("§8- §7enemy §8- Track closest enemy");
+    }
+    
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        List<String> completions = new ArrayList<>();
+        
+        if (args.length == 1) {
+            // Tab complete compass tracking modes
+            String partial = args[0].toLowerCase();
+            List<String> modes = Arrays.asList("spawn", "feast", "party", "enemy");
+            
+            for (String mode : modes) {
+                if (mode.toLowerCase().startsWith(partial)) {
+                    completions.add(mode);
+                }
+            }
+        }
+        
+        return completions;
     }
 }
