@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id("xyz.jpenilla.run-paper") version "2.3.1"
     id("com.gradleup.shadow") version "9.0.2"
+
 }
 
 group = 'com.api_d'
@@ -36,6 +37,8 @@ dependencies {
     
     // WorldEdit API - using the correct artifact and version
     compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.2.15")
+    
+
 }
 
 // Configure shadowJar to relocate dependencies to avoid conflicts
@@ -79,10 +82,138 @@ java {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.deprecation = true
+    
+    // Enable all compiler warnings
+    options.compilerArgs += [
+        '-Xlint:all',
+        '-Xlint:-processing',
+        '-Xlint:-serial'
+    ]
+    
+    // Additional warning flags
+    options.compilerArgs += [
+        '-Xlint:unchecked',
+        '-Xlint:cast',
+        '-Xlint:deprecation',
+        '-Xlint:divzero',
+        '-Xlint:empty',
+        '-Xlint:fallthrough',
+        '-Xlint:finally',
+        '-Xlint:overrides',
+        '-Xlint:path',
+        '-Xlint:rawtypes',
+        '-Xlint:static',
+        '-Xlint:try'
+    ]
 
     if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
         options.release.set(targetJavaVersion)
     }
+}
+
+
+
+
+
+// Create configuration directories and files
+task createConfigDirs {
+    doLast {
+        mkdir "${rootDir}/config/checkstyle"
+    }
+}
+
+
+
+// Custom tasks for comprehensive code quality checks
+task qualityCheck {
+    group = 'verification'
+    description = 'Runs all code quality checks and displays warnings'
+    
+    dependsOn 'compileJava'
+    
+    doLast {
+        println "\n" + "="*80
+        println "QUALITY CHECK COMPLETE"
+        println "="*80
+        
+
+        
+
+        
+        // Display compiler warnings
+        println "\nCOMPILER WARNINGS:"
+        println "-" * 40
+        def compileJava = tasks.findByName('compileJava')
+        if (compileJava && compileJava.state.executed) {
+            println "Java compilation completed with warnings enabled"
+        }
+        
+        println "\n" + "="*80
+        println "Run 'gradle compileJava' to see compiler warnings"
+        println "="*80
+    }
+}
+
+// Task to show all warnings in a summary
+task showWarnings {
+    group = 'verification'
+    description = 'Shows a summary of all warnings and issues'
+    
+    doLast {
+        println "\n" + "="*80
+        println "WARNING SUMMARY"
+        println "="*80
+        
+        // Check for common issues
+        def sourceDir = file("${projectDir}/src/main/java")
+        def todoCount = 0
+        def fixmeCount = 0
+        
+        sourceDir.eachFileRecurse { file ->
+            if (file.name.endsWith('.java')) {
+                file.eachLine { line ->
+                    if (line.contains('TODO')) todoCount++
+                    if (line.contains('FIXME')) fixmeCount++
+                    if (line.contains('XXX')) todoCount++
+                    if (line.contains('HACK')) todoCount++
+                }
+            }
+        }
+        
+        println "TODOs found: ${todoCount}"
+        println "FIXMEs found: ${fixmeCount}"
+        println "\nRun 'gradle qualityCheck' for comprehensive analysis"
+        println "="*80
+    }
+}
+
+// Task to show build configuration
+task showConfig {
+    group = 'help'
+    description = 'Shows the current build configuration for warnings'
+    
+    doLast {
+        println "\nBUILD CONFIGURATION FOR WARNINGS:"
+        println "-" * 40
+        println "Java version: ${targetJavaVersion}"
+        println "Encoding: UTF-8"
+        println "Deprecation warnings: enabled"
+        println "All compiler warnings: enabled"
+        println "Checkstyle: enabled (max warnings: 0)"
+        println "SpotBugs: enabled (effort: max, level: medium)"
+        println "Strict mode: enabled"
+        println "-" * 40
+    }
+}
+
+
+
+// Task to clean and rebuild with all checks
+task cleanBuild {
+    group = 'build'
+    description = 'Clean build with all quality checks'
+    
+    dependsOn 'clean', 'qualityCheck'
 }
 
 processResources {

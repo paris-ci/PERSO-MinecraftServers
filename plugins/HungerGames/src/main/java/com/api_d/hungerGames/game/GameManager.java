@@ -7,10 +7,12 @@ import com.api_d.hungerGames.database.models.GameParty;
 import com.api_d.hungerGames.events.*;
 import com.api_d.hungerGames.kits.KitManager;
 import com.api_d.hungerGames.player.PlayerManager;
+import com.api_d.hungerGames.world.PlatformGenerator;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -38,6 +40,14 @@ public class GameManager implements Listener {
     private final KitManager kitManager;
     private final GameStateMachine stateMachine;
     private final HGLogger logger;
+    
+    // Game managers
+    private final PlatformGenerator platformGenerator;
+    private final CompassTracker compassTracker;
+    private final FeastManager feastManager;
+    private final BorderManager borderManager;
+    private final FinalFightManager finalFightManager;
+    private final SpectatorManager spectatorManager;
     
     // Game state
     private Game currentGame;
@@ -69,7 +79,15 @@ public class GameManager implements Listener {
         this.playerManager = playerManager;
         this.kitManager = kitManager;
         this.logger = new HGLogger(plugin);
-        this.stateMachine = new GameStateMachine(plugin, config.shouldLogStateChanges());
+        this.stateMachine = new GameStateMachine(config.shouldLogStateChanges());
+        
+        // Initialize game managers
+        this.platformGenerator = new PlatformGenerator(config, plugin.getLogger());
+        this.compassTracker = new CompassTracker(plugin, playerParties);
+        this.feastManager = new FeastManager(plugin, config, platformGenerator);
+        this.borderManager = new BorderManager(plugin, config);
+        this.finalFightManager = new FinalFightManager(plugin, alivePlayers);
+        this.spectatorManager = new SpectatorManager(plugin, config, kitManager);
         
         // Register event listeners
         Bukkit.getPluginManager().registerEvents(this, plugin);
@@ -147,10 +165,14 @@ public class GameManager implements Listener {
         World world = Bukkit.getWorlds().get(0); // Main world
         spawnLocation = world.getSpawnLocation();
         
-        // Set world border
-        WorldBorder border = world.getWorldBorder();
-        border.setCenter(spawnLocation);
-        border.setSize(config.getWorldBorderInitialSize());
+        // Generate spawn platform
+        platformGenerator.generateSpawnPlatform(spawnLocation);
+        
+        // Initialize world border
+        borderManager.initializeBorder(world, spawnLocation);
+        
+        // Set compass tracker spawn location
+        compassTracker.setSpawnLocation(spawnLocation);
         
         // Clear weather
         world.setStorm(false);
@@ -452,8 +474,8 @@ public class GameManager implements Listener {
             player.removePotionEffect(PotionEffectType.JUMP_BOOST);
             player.setWalkSpeed(0.2f); // Normal speed
             
-            // Give compass
-            // TODO: Implement compass tracking system
+            // Give compass with tracking system
+            compassTracker.giveCompass(player);
         }
         
         broadcastMessage("§aThe Hunger Games have begun! Good luck!");
@@ -503,6 +525,9 @@ public class GameManager implements Listener {
             return;
         }
         
+        // Start feast reminders
+        feastManager.startFeastReminders();
+        
         feastSpawnTask = new BukkitRunnable() {
             @Override
             public void run() {
@@ -515,12 +540,38 @@ public class GameManager implements Listener {
      * Spawn the feast
      */
     private void spawnFeast() {
-        // TODO: Implement feast spawning
-        feastSpawned = true;
-        stateMachine.transitionTo(GameState.FEAST, "Feast spawned");
+        World world = Bukkit.getWorlds().get(0);
+        feastLocation = feastManager.spawnFeast(world, spawnLocation);
         
-        logger.info("Feast has spawned!");
-        broadcastMessage(config.getMessage("feast_spawned", "x", "0", "z", "0")); // Placeholder coordinates
+        if (feastLocation != null) {
+            feastSpawned = true;
+            stateMachine.transitionTo(GameState.FEAST, "Feast spawned");
+            
+            // Update compass tracker with feast location
+            compassTracker.setFeastLocation(feastLocation);
+            
+            // Start border shrinking
+            borderManager.startBorderShrinking();
+            
+            // Start final fight timer
+            startFinalFightTimer();
+            
+            logger.info("Feast spawned successfully at " + feastLocation.toString());
+        } else {
+            logger.warning("Failed to spawn feast");
+        }
+    }
+    
+    /**
+     * Check if final fight should start (when border reaches minimum size)
+     */
+    private void checkFinalFightStart() {
+        if (borderManager.getCurrentBorderSize() <= config.getWorldBorderMinimumSize() + 10) {
+            // Border is close to minimum, start final fight
+            if (!finalFightManager.isFinalFightActive()) {
+                finalFightManager.startFinalFight();
+            }
+        }
     }
     
     /**
@@ -534,8 +585,27 @@ public class GameManager implements Listener {
                 for (UUID playerId : alivePlayers) {
                     playerManager.awardCredits(playerId, credits, "Survived one minute");
                 }
+                
+                // Update compasses periodically
+                compassTracker.updateAllCompasses();
+                
+                // Check if final fight should start
+                checkFinalFightStart();
             }
         }.runTaskTimer(plugin, 1200, 1200); // Every minute
+    }
+    
+    /**
+     * Start the final fight timer
+     */
+    private void startFinalFightTimer() {
+        finalFightTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                // Start final fight phase with poison effects
+                finalFightManager.startFinalFight();
+            }
+        }.runTaskLater(plugin, config.getMaxGameTime() * 60 * 20L); // Convert minutes to ticks
     }
     
     /**
@@ -593,18 +663,13 @@ public class GameManager implements Listener {
      * Set a player as spectator
      */
     private void setPlayerAsSpectator(Player player) {
-        player.setGameMode(GameMode.SPECTATOR);
-        player.sendMessage(config.getMessage("spectator_mode"));
-        
-        // Clear inventory
-        player.getInventory().clear();
+        // Use spectator manager to handle all spectator functionality
+        spectatorManager.setPlayerAsSpectator(player);
         
         // Remove potion effects
         for (PotionEffect effect : player.getActivePotionEffects()) {
             player.removePotionEffect(effect.getType());
         }
-        
-        // TODO: Give spectator compass and items
     }
     
     /**
@@ -645,6 +710,13 @@ public class GameManager implements Listener {
         playerSurvivalTimes.clear();
         pvpEnabled = false;
         feastSpawned = false;
+        
+        // Reset managers
+        feastManager.reset();
+        borderManager.reset();
+        finalFightManager.reset();
+        spectatorManager.reset();
+        compassTracker.removePlayer(null); // Clear all players
         
         // Reset state machine
         stateMachine.reset();
@@ -716,6 +788,12 @@ public class GameManager implements Listener {
         if (borderShrinkTask != null) borderShrinkTask.cancel();
         if (finalFightTask != null) finalFightTask.cancel();
         if (survivalTask != null) survivalTask.cancel();
+        
+        // Clean up managers
+        feastManager.cleanup();
+        borderManager.cleanup();
+        finalFightManager.cleanup();
+        spectatorManager.cleanup();
     }
     
     /**
@@ -731,6 +809,31 @@ public class GameManager implements Listener {
     @EventHandler
     public void onGameStateChange(GameStateChangeEvent event) {
         logger.info("Game state changed: " + event.getPreviousState() + " -> " + event.getNewState());
+    }
+    
+    /**
+     * Handle player disconnection
+     */
+    public void handlePlayerDisconnect(Player player) {
+        UUID playerId = player.getUniqueId();
+        
+        if (alivePlayers.contains(playerId)) {
+            // Player was alive, handle as death
+            handlePlayerDeath(player, null, "Disconnected");
+            
+            // Drop inventory
+            for (ItemStack item : player.getInventory().getContents()) {
+                if (item != null) {
+                    player.getWorld().dropItemNaturally(player.getLocation(), item);
+                }
+            }
+            
+            // Penalize credits
+            playerManager.awardCredits(playerId, config.getAfkPenalty(), "Disconnected");
+        }
+        
+        // Remove from compass tracker
+        compassTracker.removePlayer(playerId);
     }
     
     // Getters

@@ -2,7 +2,6 @@ package com.api_d.hungerGames.database;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 import com.api_d.hungerGames.util.HGLogger;
 
@@ -18,7 +17,6 @@ import java.util.logging.Level;
  */
 public class DatabaseManager {
     
-    private final Plugin plugin;
     private final HGLogger logger;
     private HikariDataSource dataSource;
     private final String host;
@@ -28,7 +26,6 @@ public class DatabaseManager {
     private final String password;
     
     public DatabaseManager(Plugin plugin, String host, int port, String database, String username, String password) {
-        this.plugin = plugin;
         this.logger = new HGLogger(plugin);
         this.host = host;
         this.port = port;

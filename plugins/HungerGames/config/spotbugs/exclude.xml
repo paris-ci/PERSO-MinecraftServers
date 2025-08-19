@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter
+        xmlns="https://github.com/spotbugs/filter/3.0.0"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="https://github.com/spotbugs/filter/3.0.0 https://raw.githubusercontent.com/spotbugs/spotbugs/3.1.0/spotbugs/etc/findbugsfilter.xsd">
+
+    <!-- Exclude common false positives -->
+    
+    <!-- Exclude serialization warnings for Minecraft plugins -->
+    <Match>
+        <Bug pattern="SE_NO_SERIALVERSIONID"/>
+    </Match>
+    
+    <!-- Exclude warnings about unused fields that are used by reflection -->
+    <Match>
+        <Bug pattern="UUF_UNUSED_FIELD"/>
+        <Field name="plugin"/>
+        <Field name="instance"/>
+    </Match>
+    
+    <!-- Exclude warnings about unused methods that are called by Bukkit -->
+    <Match>
+        <Bug pattern="UUF_UNUSED_METHOD"/>
+        <Method name="onEnable"/>
+        <Method name="onDisable"/>
+        <Method name="onCommand"/>
+        <Method name="onPlayerJoin"/>
+        <Method name="onPlayerQuit"/>
+        <Method name="onPlayerDeath"/>
+        <Method name="onPlayerRespawn"/>
+    </Match>
+    
+    <!-- Exclude warnings about null checks that are handled by Bukkit -->
+    <Match>
+        <Bug pattern="NP_NULL_ON_SOME_PATH"/>
+        <Class name="~.*Command"/>
+    </Match>
+    
+    <!-- Exclude warnings about resource leaks in Bukkit event handlers -->
+    <Match>
+        <Bug pattern="OS_OPEN_STREAM"/>
+        <Class name="~.*Event"/>
+    </Match>
+    
+    <!-- Exclude warnings about magic numbers in Minecraft coordinates -->
+    <Match>
+        <Bug pattern="DLS_DEAD_LOCAL_STORE"/>
+        <Method name="generatePlatform"/>
+        <Method name="spawnFeast"/>
+    </Match>
+    
+    <!-- Exclude warnings about unused parameters in event handlers -->
+    <Match>
+        <Bug pattern="UUF_UNUSED_PARAMETER"/>
+        <Method name="onEvent"/>
+        <Method name="handleEvent"/>
+    </Match>
+
+</FindBugsFilter>
