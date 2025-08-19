@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id("xyz.jpenilla.run-paper") version "2.3.1"
+    id("com.gradleup.shadow") version "9.0.2"
 }
 
 group = 'com.api_d'
@@ -12,27 +13,51 @@ repositories {
         name = "papermc-repo"
         url = "https://repo.papermc.io/repository/maven-public/"
     }
+    maven {
+        name = "sk89q-repo"
+        url = "https://maven.enginehub.org/repo/"
+    }
+    maven {
+        name = "spigot-repo"
+        url = "https://hub.spigotmc.org/nexus/content/repositories/snapshots/"
+    }
 }
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT")
     
-    // Database dependencies
+    // Database dependencies - these need to be included in the final JAR
     implementation("org.postgresql:postgresql:42.7.4")
     implementation("com.zaxxer:HikariCP:5.1.0")
     
-    // Utility dependencies
+    // Utility dependencies - these need to be included in the final JAR
     implementation("org.json:json:20240303")
     implementation("com.google.guava:guava:33.0.0-jre")
     
-    // Optional: WorldEdit API for schematic support (if available)
-    compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.0") {
-        exclude group: "org.bukkit"
-        exclude group: "org.spigotmc"
-    }
+    // WorldEdit API - using the correct artifact and version
+    compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.2.15")
 }
 
+// Configure shadowJar to relocate dependencies to avoid conflicts
 tasks {
+    shadowJar {
+        def mapping = [
+            "com.zaxxer.hikari": "hikari",
+            "org.postgresql": "postgresql",
+            "org.json": "json",
+            "com.google.common": "guava"
+        ]
+        def base = "com.api_d.hungerGames.libs."
+        mapping.each { pattern, name ->
+            relocate(pattern, "${base}${name}")
+        }
+    }
+    
+    // Make build depend on shadowJar
+    build {
+        dependsOn(shadowJar)
+    }
+    
     runServer {
         // Configure the Minecraft version for our task.
         // This is the only required configuration besides applying the plugin.

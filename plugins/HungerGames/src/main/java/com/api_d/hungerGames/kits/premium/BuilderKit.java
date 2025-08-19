@@ -39,7 +39,7 @@ public class BuilderKit extends Kit {
     @Override
     public List<PotionEffect> getStartingEffects() {
         return Arrays.asList(
-            new PotionEffect(PotionEffectType.JUMP, 2400, 0), // 2:00 Jump boost I
+            new PotionEffect(PotionEffectType.JUMP_BOOST, 2400, 0), // 2:00 Jump boost I
             new PotionEffect(PotionEffectType.REGENERATION, 2400, 1) // 2:00 Regeneration II
         );
     }

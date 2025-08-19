@@ -37,7 +37,7 @@ public class TankKit extends Kit {
     @Override
     public List<PotionEffect> getStartingEffects() {
         return Arrays.asList(
-            new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 6000, 0), // 5:00 Resistance I
+            new PotionEffect(PotionEffectType.RESISTANCE, 6000, 0), // 5:00 Resistance I
             new PotionEffect(PotionEffectType.SLOWNESS, 3600, 0) // 3:00 Slowness I
         );
     }

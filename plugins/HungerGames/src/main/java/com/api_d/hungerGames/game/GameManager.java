@@ -260,8 +260,8 @@ public class GameManager implements Listener {
             
             // Set game mode and effects
             player.setGameMode(GameMode.SURVIVAL);
-            player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, Integer.MAX_VALUE, 10)); // Invincibility
-            player.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, Integer.MAX_VALUE, 128)); // No jumping
+            player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, Integer.MAX_VALUE, 10)); // Invincibility
+            player.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, Integer.MAX_VALUE, 128)); // No jumping
             player.setWalkSpeed(0f); // Can't move
             
             // Save kit selection to database
@@ -386,8 +386,8 @@ public class GameManager implements Listener {
         
         // Remove movement restrictions
         for (Player player : Bukkit.getOnlinePlayers()) {
-            player.removePotionEffect(PotionEffectType.DAMAGE_RESISTANCE);
-            player.removePotionEffect(PotionEffectType.JUMP);
+            player.removePotionEffect(PotionEffectType.RESISTANCE);
+            player.removePotionEffect(PotionEffectType.JUMP_BOOST);
             player.setWalkSpeed(0.2f); // Normal speed
             
             // Give compass

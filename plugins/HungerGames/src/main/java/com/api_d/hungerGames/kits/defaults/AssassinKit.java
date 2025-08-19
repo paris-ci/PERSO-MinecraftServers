@@ -44,7 +44,7 @@ public class AssassinKit extends Kit {
         ItemStack sword = new ItemStack(Material.IRON_SWORD);
         ItemMeta swordMeta = sword.getItemMeta();
         if (swordMeta != null) {
-            swordMeta.addEnchant(org.bukkit.enchantments.Enchantment.DAMAGE_ALL, 2, true);
+            swordMeta.addEnchant(org.bukkit.enchantments.Enchantment.SHARPNESS, 2, true);
             sword.setItemMeta(swordMeta);
         }
         
@@ -87,7 +87,7 @@ public class AssassinKit extends Kit {
     @Override
     protected void applySpecialEffects(Player player) {
         // Set maximum health to 4 hearts (8 health points)
-        player.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(8.0);
+        player.getAttribute(Attribute.MAX_HEALTH).setBaseValue(8.0);
         player.setHealth(8.0);
     }
     

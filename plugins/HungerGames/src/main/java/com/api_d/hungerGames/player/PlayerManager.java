@@ -2,7 +2,6 @@ package com.api_d.hungerGames.player;
 
 import com.api_d.hungerGames.database.DatabaseManager;
 import com.api_d.hungerGames.database.models.Player;
-import org.bukkit.entity.Player as BukkitPlayer;
 
 import java.sql.*;
 import java.util.HashMap;
@@ -29,7 +28,7 @@ public class PlayerManager {
     /**
      * Load or create a player in the database
      */
-    public CompletableFuture<Player> loadPlayer(BukkitPlayer bukkitPlayer) {
+    public CompletableFuture<Player> loadPlayer(org.bukkit.entity.Player bukkitPlayer) {
         return loadPlayer(bukkitPlayer.getUniqueId());
     }
     
@@ -223,7 +222,7 @@ public class PlayerManager {
     /**
      * Get a player's credits
      */
-    public int getPlayerCredits(BukkitPlayer bukkitPlayer) {
+    public int getPlayerCredits(org.bukkit.entity.Player bukkitPlayer) {
         return getPlayerCredits(bukkitPlayer.getUniqueId());
     }
     
@@ -256,7 +255,7 @@ public class PlayerManager {
     /**
      * Get cached player data
      */
-    public Player getCachedPlayer(BukkitPlayer bukkitPlayer) {
+    public Player getCachedPlayer(org.bukkit.entity.Player bukkitPlayer) {
         return playerCache.get(bukkitPlayer.getUniqueId());
     }
     

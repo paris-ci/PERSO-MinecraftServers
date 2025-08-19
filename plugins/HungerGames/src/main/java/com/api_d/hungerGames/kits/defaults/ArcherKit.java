@@ -40,7 +40,7 @@ public class ArcherKit extends Kit {
     @Override
     public List<PotionEffect> getStartingEffects() {
         return Arrays.asList(
-            new PotionEffect(PotionEffectType.JUMP, 1200, 1) // 1:00 Jump II
+            new PotionEffect(PotionEffectType.JUMP_BOOST, 1200, 1) // 1:00 Jump II
         );
     }
     

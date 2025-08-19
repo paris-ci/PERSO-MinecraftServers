@@ -4,7 +4,8 @@ import com.api_d.hungerGames.events.GameStateChangeEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 
-import java.util.EnumSet;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Logger;
 
@@ -19,7 +20,7 @@ public class GameStateMachine {
     private final boolean logStateChanges;
     
     // Define valid state transitions
-    private static final Set<StateTransition> VALID_TRANSITIONS = EnumSet.of(
+    private static final Set<StateTransition> VALID_TRANSITIONS = new HashSet<>(Arrays.asList(
         // From WAITING
         new StateTransition(GameState.WAITING, GameState.STARTING),
         new StateTransition(GameState.WAITING, GameState.FINISHED), // Server shutdown
@@ -52,7 +53,7 @@ public class GameStateMachine {
         
         // From ENDING
         new StateTransition(GameState.ENDING, GameState.FINISHED)
-    );
+    ));
     
     public GameStateMachine(Plugin plugin, boolean logStateChanges) {
         this.plugin = plugin;

@@ -28,7 +28,7 @@ public class BerserkerKit extends Kit {
         ItemStack axe = new ItemStack(Material.IRON_AXE);
         ItemMeta axeMeta = axe.getItemMeta();
         if (axeMeta != null) {
-            axeMeta.addEnchant(org.bukkit.enchantments.Enchantment.DAMAGE_ALL, 1, true);
+            axeMeta.addEnchant(org.bukkit.enchantments.Enchantment.SHARPNESS, 1, true);
             axe.setItemMeta(axeMeta);
         }
         
@@ -45,7 +45,7 @@ public class BerserkerKit extends Kit {
     @Override
     public List<PotionEffect> getStartingEffects() {
         return Arrays.asList(
-            new PotionEffect(PotionEffectType.INCREASE_DAMAGE, 2400, 0), // 2:00 Strength I
+            new PotionEffect(PotionEffectType.STRENGTH, 2400, 0), // 2:00 Strength I
             new PotionEffect(PotionEffectType.SPEED, 4800, 0) // 4:00 Speed I
         );
     }
@@ -89,7 +89,7 @@ public class BerserkerKit extends Kit {
             // Play various aggressive sounds
             spectator.getWorld().playSound(spectator.getLocation(), Sound.ENTITY_GHAST_SCREAM, 1.0f, 0.8f);
             spectator.getWorld().playSound(spectator.getLocation(), Sound.ENTITY_BLAZE_HURT, 1.0f, 0.5f);
-            spectator.getWorld().playSound(spectator.getLocation(), Sound.ENTITY_ZOMBIE_ANGRY, 1.0f, 0.7f);
+            spectator.getWorld().playSound(spectator.getLocation(), Sound.ENTITY_ZOMBIE_AMBIENT, 1.0f, 0.7f);
             
             // Play sounds to nearby players as well
             spectator.getWorld().getPlayers().stream()
