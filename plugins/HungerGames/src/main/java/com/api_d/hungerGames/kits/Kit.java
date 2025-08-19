@@ -100,7 +100,7 @@ public abstract class Kit {
         List<PotionEffect> effects = getStartingEffects();
         for (PotionEffect effect : effects) {
             if (effect != null) {
-                player.addPotionEffect(effect, true);
+                player.addPotionEffect(effect);
             }
         }
         

@@ -16,6 +16,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import net.kyori.adventure.text.Component;
 
 import java.util.logging.Level;
 
@@ -250,8 +251,8 @@ public final class HungerGames extends JavaPlugin implements Listener {
             // Check if we should start the game
             checkAndStartGame();
             
-            // Set custom join message
-            event.setJoinMessage(config.getPrefix() + "§e" + event.getPlayer().getName() + " joined the Hunger Games!");
+            // Set custom join message - using modern API
+            event.joinMessage(Component.text(config.getPrefix() + "§e" + event.getPlayer().getName() + " joined the Hunger Games!"));
             
         } catch (Exception e) {
             hgLogger.log(Level.SEVERE, "Error handling player join: " + event.getPlayer().getName(), e);
@@ -279,8 +280,8 @@ public final class HungerGames extends JavaPlugin implements Listener {
             // Check if we should cancel the game due to insufficient players
             checkAndCancelGame();
             
-            // Set custom quit message
-            event.setQuitMessage(config.getPrefix() + "§7" + event.getPlayer().getName() + " left the Hunger Games!");
+            // Set custom quit message - using modern API
+            event.quitMessage(Component.text(config.getPrefix() + "§7" + event.getPlayer().getName() + " left the Hunger Games!"));
             
         } catch (Exception e) {
             hgLogger.log(Level.SEVERE, "Error handling player quit: " + event.getPlayer().getName(), e);

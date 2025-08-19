@@ -2,10 +2,11 @@ package com.api_d.hungerGames.commands;
 
 import com.api_d.hungerGames.HungerGames;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 /**
  * Command for managing player credits
@@ -36,7 +37,7 @@ public class CreditsCommand extends BaseCommand {
             
             Player target = Bukkit.getPlayer(args[0]);
             if (target == null) {
-                sender.sendMessage(ChatColor.RED + "Player not found: " + args[0]);
+                sender.sendMessage(Component.text("Player not found: " + args[0], NamedTextColor.RED));
                 return true;
             }
             
@@ -51,7 +52,7 @@ public class CreditsCommand extends BaseCommand {
             
             Player target = Bukkit.getPlayer(args[1]);
             if (target == null) {
-                sender.sendMessage(ChatColor.RED + "Player not found: " + args[1]);
+                sender.sendMessage(Component.text("Player not found: " + args[1], NamedTextColor.RED));
                 return true;
             }
             
@@ -66,7 +67,7 @@ public class CreditsCommand extends BaseCommand {
                 return true;
                 
             } catch (NumberFormatException e) {
-                sender.sendMessage(ChatColor.RED + "Invalid amount: " + args[2]);
+                sender.sendMessage(Component.text("Invalid amount: " + args[2], NamedTextColor.RED));
                 return true;
             }
         }

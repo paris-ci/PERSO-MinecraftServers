@@ -4,10 +4,11 @@ import com.api_d.hungerGames.HungerGames;
 import com.api_d.hungerGames.events.KitSelectionEvent;
 import com.api_d.hungerGames.kits.Kit;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 /**
  * Command for managing kit selection
@@ -39,14 +40,14 @@ public class KitCommand extends BaseCommand {
             Kit kit = plugin.getKitManager().getKit(kitId);
             
             if (kit == null) {
-                sender.sendMessage(ChatColor.RED + "Unknown kit: " + args[0]);
+                sender.sendMessage(Component.text("Unknown kit: " + args[0], NamedTextColor.RED));
                 showAvailableKits(player);
                 return true;
             }
             
             // Check if game allows kit selection
             if (!plugin.getGameManager().getCurrentState().canSelectKits()) {
-                sender.sendMessage(ChatColor.RED + "You cannot select kits at this time!");
+                sender.sendMessage(Component.text("You cannot select kits at this time!", NamedTextColor.RED));
                 return true;
             }
             
@@ -65,7 +66,7 @@ public class KitCommand extends BaseCommand {
             if (event.isCancelled()) {
                 String reason = event.getCancelReason();
                 if (reason != null) {
-                    sender.sendMessage(ChatColor.RED + reason);
+                    sender.sendMessage(Component.text(reason, NamedTextColor.RED));
                 }
                 return true;
             }
@@ -117,9 +118,9 @@ public class KitCommand extends BaseCommand {
         sendMessage(player, "&6Premium Kits:");
         for (Kit kit : plugin.getKitManager().getPremiumKits()) {
             boolean canAfford = kit.canPlayerUse(player, playerCredits);
-            ChatColor color = canAfford ? ChatColor.GREEN : ChatColor.RED;
+            NamedTextColor color = canAfford ? NamedTextColor.GREEN : NamedTextColor.RED;
             
-            sendMessage(player, "  " + color + kit.getId() + " &7(" + kit.getCost() + " credits) - " + kit.getDescription());
+            sendMessage(player, "  " + "&" + (canAfford ? "a" : "c") + kit.getId() + " &7(" + kit.getCost() + " credits) - " + kit.getDescription());
         }
         
         sendMessage(player, "");

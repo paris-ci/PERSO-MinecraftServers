@@ -2,11 +2,13 @@ package com.api_d.hungerGames.commands;
 
 import com.api_d.hungerGames.HungerGames;
 import com.api_d.hungerGames.util.HGLogger;
-import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 /**
  * Base class for all HungerGames commands
@@ -26,7 +28,7 @@ public abstract class BaseCommand implements CommandExecutor {
         } catch (Exception e) {
             HGLogger hgLogger = new HGLogger(plugin);
             hgLogger.severe("Error executing command '" + label + "': " + e.getMessage());
-            sender.sendMessage(ChatColor.RED + "An error occurred while executing the command.");
+            sender.sendMessage(Component.text("An error occurred while executing the command.", NamedTextColor.RED));
             return true;
         }
     }
@@ -48,7 +50,7 @@ public abstract class BaseCommand implements CommandExecutor {
      */
     protected Player getPlayer(CommandSender sender) {
         if (!isPlayer(sender)) {
-            sender.sendMessage(ChatColor.RED + "This command can only be used by players.");
+            sender.sendMessage(Component.text("This command can only be used by players.", NamedTextColor.RED));
             return null;
         }
         return (Player) sender;
@@ -66,7 +68,7 @@ public abstract class BaseCommand implements CommandExecutor {
      */
     protected boolean checkPermission(CommandSender sender, String permission) {
         if (!hasPermission(sender, permission)) {
-            sender.sendMessage(ChatColor.RED + "You don't have permission to use this command.");
+            sender.sendMessage(Component.text("You don't have permission to use this command.", NamedTextColor.RED));
             return false;
         }
         return true;
@@ -77,13 +79,14 @@ public abstract class BaseCommand implements CommandExecutor {
      */
     protected void sendMessage(CommandSender sender, String message) {
         String prefixedMessage = plugin.getGameConfig().getPrefix() + message;
-        sender.sendMessage(ChatColor.translateAlternateColorCodes('&', prefixedMessage));
+        Component component = LegacyComponentSerializer.legacyAmpersand().deserialize(prefixedMessage);
+        sender.sendMessage(component);
     }
     
     /**
      * Send usage information
      */
     protected void sendUsage(CommandSender sender, String usage) {
-        sender.sendMessage(ChatColor.RED + "Usage: " + usage);
+        sender.sendMessage(Component.text("Usage: " + usage, NamedTextColor.RED));
     }
 }

@@ -17,6 +17,9 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import com.api_d.hungerGames.util.HGLogger;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.title.Title;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 import java.sql.*;
 import java.util.*;
@@ -421,7 +424,10 @@ public class GameManager implements Listener {
                 
                 // Display countdown
                 for (Player player : Bukkit.getOnlinePlayers()) {
-                    player.sendTitle("§c" + countdown, "§eGet ready to fight!", 0, 20, 0);
+                    player.showTitle(Title.title(
+                        Component.text("§c" + countdown), 
+                        Component.text("§eGet ready to fight!")
+                    ));
                     player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.0f);
                 }
                 
@@ -717,7 +723,8 @@ public class GameManager implements Listener {
      */
     private void broadcastMessage(String message) {
         String prefixedMessage = config.getPrefix() + message;
-        Bukkit.broadcastMessage(ChatColor.translateAlternateColorCodes('&', prefixedMessage));
+        Component component = LegacyComponentSerializer.legacyAmpersand().deserialize(prefixedMessage);
+        Bukkit.broadcast(component);
     }
     
     // Event handlers
