@@ -5,7 +5,9 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.List;
@@ -237,29 +239,16 @@ public class PlatformGenerator {
             Block chestBlock = world.getBlockAt(chestLocation);
             chestBlock.setType(Material.CHEST);
             
-            // Force block update to ensure chest is properly placed
-            chestBlock.getState().update(true, false);
-            
-            // Try to fill the chest immediately
-            if (chestBlock.getState() instanceof Chest chest) {
-                logger.info("Filling chest at " + chestLocation.toString() + " with " + lootItems.size() + " items");
-                fillChestWithLoot(chest, lootItems);
-            } else {
-                logger.warning("Failed to get chest state at " + chestLocation.toString() + " - retrying...");
+            // Get the block state and ensure it's a chest
+            BlockState state = chestBlock.getState();
+            if (state instanceof Chest chest) {
+                logger.info("Creating and filling chest at " + chestLocation.toString() + " with " + lootItems.size() + " items");
                 
-                // If immediate filling fails, try again after a short delay
-                try {
-                    Thread.sleep(100); // Wait 100ms
-                    Block retryBlock = world.getBlockAt(chestLocation);
-                    if (retryBlock.getState() instanceof Chest retryChest) {
-                        logger.info("Retry successful - filling chest at " + chestLocation.toString());
-                        fillChestWithLoot(retryChest, lootItems);
-                    } else {
-                        logger.warning("Retry failed - chest still not accessible at " + chestLocation.toString());
-                    }
-                } catch (InterruptedException e) {
-                    logger.warning("Interrupted while waiting to retry chest filling at " + chestLocation.toString());
-                }
+                // Fill the chest inventory
+                fillChestWithLoot(chest, lootItems);
+                logger.info("Chest successfully created and filled at " + chestLocation.toString());
+            } else {
+                logger.warning("Failed to create chest at " + chestLocation.toString() + " - block state is not a chest");
             }
         }
         
@@ -270,40 +259,68 @@ public class PlatformGenerator {
      * Fill a chest with loot items
      */
     private void fillChestWithLoot(Chest chest, List<String> lootItems) {
-        logger.info("Filling chest at " + chest.getLocation().toString() + " with " + lootItems.size() + " loot items");
-        
+        Inventory inv = chest.getInventory();
+
         for (String itemString : lootItems) {
+            // Parse item string format: "MATERIAL:AMOUNT"
+            String[] parts = itemString.split(":");
+            if (parts.length != 2) {
+                logger.warning("Invalid loot item format: " + itemString + ". " + "Expected format: MATERIAL:AMOUNT");
+                continue;
+            }
+
+            Material material;
             try {
-                // Parse item string format: "MATERIAL:AMOUNT"
-                String[] parts = itemString.split(":");
-                if (parts.length != 2) {
-                    logger.warning("Invalid loot item format: " + itemString);
-                    continue;
-                }
-                
-                Material material = Material.valueOf(parts[0].toUpperCase());
-                int amount = Integer.parseInt(parts[1]);
-                
-                ItemStack item = new ItemStack(material, amount);
-                
-                // Add item to a random slot in the chest
-                int slot = random.nextInt(chest.getInventory().getSize());
-                
-                // Find an empty slot if the random one is occupied
-                while (chest.getInventory().getItem(slot) != null) {
-                    slot = (slot + 1) % chest.getInventory().getSize();
-                }
-                
-                chest.getInventory().setItem(slot, item);
-                logger.info("Added " + amount + "x " + material.name() + " to chest slot " + slot);
-                
+                material = Material.valueOf(parts[0].toUpperCase());
             } catch (IllegalArgumentException e) {
                 logger.warning("Invalid material in loot items: " + itemString + " - " + e.getMessage());
+                continue;
             }
+            
+            int amount = Integer.parseInt(parts[1]);
+            
+            ItemStack item = new ItemStack(material, amount);
+            
+            // Add item to a random slot in the chest
+            int slot = random.nextInt(inv.getSize());
+            
+            // Find an empty slot if the random one is occupied
+            while (inv.getItem(slot) != null) {
+                slot = (slot + 1) % inv.getSize();
+            }
+            
+            inv.setItem(slot, item);
+            // logger.info("Added " + amount + "x " + material.name() + " to chest slot " + slot);
         }
         
-        chest.update();
-        logger.info("Chest filled successfully with " + lootItems.size() + " items");
+        // logger.info("Chest filled successfully with " + lootItems.size() + " items");
+    }
+    
+    /**
+     * Create a single chest at the specified location and fill it with items
+     * This method follows the proper Paper API pattern for chest creation
+     */
+    public void createAndFillChest(Location location, List<String> lootItems) {
+        World world = location.getWorld();
+        Block block = world.getBlockAt(location);
+        
+        // Set the block to a chest
+        block.setType(Material.CHEST);
+        block.getState().update(true, false);
+        
+        // Get the block state and ensure it's a chest
+        BlockState state = block.getState();
+        if (state instanceof Chest chest) {
+            logger.info("Creating and filling chest at " + location.toString());
+            
+            // Fill the chest inventory
+            fillChestWithLoot(chest, lootItems);
+            
+            
+            logger.info("Chest successfully created and filled at " + location.toString());
+        } else {
+            logger.warning("Failed to create chest at " + location.toString() + " - block state is not a chest");
+        }
     }
     
     /**

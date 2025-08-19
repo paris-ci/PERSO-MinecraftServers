@@ -4,9 +4,13 @@ import com.api_d.hungerGames.HungerGames;
 import com.api_d.hungerGames.game.GameManager;
 import com.api_d.hungerGames.game.GameState;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
+import org.bukkit.entity.Player;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
@@ -59,6 +63,8 @@ public class AdminCommand extends BaseCommand implements TabCompleter {
                 return handleEnd(sender, args);
             case "debug":
                 return handleDebug(sender, args);
+            case "debuglootchest":
+                return handleDebugLootChest(sender, args);
             default:
                 showHelp(sender);
                 return true;
@@ -354,6 +360,63 @@ public class AdminCommand extends BaseCommand implements TabCompleter {
     }
     
     /**
+     * Handle the debuglootchest command
+     */
+    private boolean handleDebugLootChest(CommandSender sender, String[] args) {
+        if (!checkPermission(sender, "hungergames.admin.debuglootchest")) return true;
+        
+        Player player = getPlayer(sender);
+        if (player == null) return true;
+        
+        if (args.length < 2) {
+            sendUsage(sender, "/hga debuglootchest <spawn|feast>");
+            return true;
+        }
+        
+        String lootType = args[1].toLowerCase();
+        List<String> lootItems;
+        
+        switch (lootType) {
+            case "spawn":
+                lootItems = plugin.getGameConfig().getSpawnItems();
+                break;
+            case "feast":
+                lootItems = plugin.getGameConfig().getFeastItems();
+                break;
+            default:
+                sendMessage(sender, "§cInvalid loot type. Use 'spawn' or 'feast'.");
+                return true;
+        }
+        
+        // Get the block the player is looking at
+        Block targetBlock = player.getTargetBlockExact(5);
+        if (targetBlock == null) {
+            sendMessage(sender, "§cNo block found within 5 blocks. Look at a block to place the chest on top.");
+            return true;
+        }
+        
+        // Calculate position on top of the target block
+        Location chestLocation = targetBlock.getLocation().add(0, 1, 0);
+        
+        // Check if the location is air (safe to place chest)
+        if (chestLocation.getBlock().getType() != Material.AIR) {
+            sendMessage(sender, "§cCannot place chest at " + chestLocation.getBlockX() + ", " + chestLocation.getBlockY() + ", " + chestLocation.getBlockZ() + " - block is not air.");
+            return true;
+        }
+        
+        try {
+            // Create and fill the chest using PlatformGenerator
+            plugin.getPlatformGenerator().createAndFillChest(chestLocation, lootItems);
+            sendMessage(sender, "§aSuccessfully created and filled chest with " + lootType + " loot at " + chestLocation.getBlockX() + ", " + chestLocation.getBlockY() + ", " + chestLocation.getBlockZ());
+        } catch (Exception e) {
+            sendMessage(sender, "§cError creating chest: " + e.getMessage());
+            plugin.getLogger().warning("Error in debuglootchest command: " + e.getMessage());
+        }
+        
+        return true;
+    }
+    
+    /**
      * Handle debug command
      */
     private boolean handleDebug(CommandSender sender, String[] args) {
@@ -416,6 +479,7 @@ public class AdminCommand extends BaseCommand implements TabCompleter {
         sendMessage(sender, "§e/hgadmin forcefinal §7- Force start final fight");
         sendMessage(sender, "§e/hgadmin end §7- Force end the game");
         sendMessage(sender, "§e/hgadmin debug §7- Show debug information about the game state");
+        sendMessage(sender, "§e/hgadmin debuglootchest <spawn|feast> §7- Create and fill a chest with loot on top of the block you're looking at");
         sendMessage(sender, "");
         sendMessage(sender, "§eAvailable states: WAITING, STARTING, ACTIVE, FEAST, BORDER_SHRINKING, FINAL_FIGHT, ENDING, FINISHED");
     }
@@ -429,7 +493,7 @@ public class AdminCommand extends BaseCommand implements TabCompleter {
             String partial = args[0].toLowerCase();
             List<String> subCommands = Arrays.asList(
                 "start", "next", "state", "cancel", "reload", "status",
-                "forcepvp", "forcefeast", "forceborder", "forcefinal", "end", "debug"
+                "forcepvp", "forcefeast", "forceborder", "forcefinal", "end", "debug", "debuglootchest"
             );
             
             for (String subCommand : subCommands) {
@@ -447,6 +511,16 @@ public class AdminCommand extends BaseCommand implements TabCompleter {
             for (String state : states) {
                 if (state.toLowerCase().startsWith(partial)) {
                     completions.add(state);
+                }
+            }
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("debuglootchest")) {
+            // Tab complete loot types
+            String partial = args[1].toLowerCase();
+            List<String> lootTypes = Arrays.asList("spawn", "feast");
+            
+            for (String lootType : lootTypes) {
+                if (lootType.toLowerCase().startsWith(partial)) {
+                    completions.add(lootType);
                 }
             }
         }

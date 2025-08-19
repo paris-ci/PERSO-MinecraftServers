@@ -54,6 +54,7 @@ permissions:
       hungergames.admin.forcefinal: true
       hungergames.admin.end: true
       hungergames.admin.debug: true
+      hungergames.admin.debuglootchest: true
   
   hungergames.credits:
     description: View your own credits
@@ -98,6 +99,8 @@ permissions:
       hungergames.admin.forceborder: true
       hungergames.admin.forcefinal: true
       hungergames.admin.end: true
+      hungergames.admin.debug: true
+      hungergames.admin.debuglootchest: true
   
   hungergames.admin.start:
     description: Force start the game
@@ -145,4 +148,8 @@ permissions:
   
   hungergames.admin.debug:
     description: Show debug information about the game state
+    default: op
+  
+  hungergames.admin.debuglootchest:
+    description: Create and fill debug chests with loot
     default: op
