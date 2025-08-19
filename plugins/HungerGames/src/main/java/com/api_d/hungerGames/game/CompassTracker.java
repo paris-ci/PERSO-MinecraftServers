@@ -41,6 +41,9 @@ public class CompassTracker implements Listener {
     private Location feastLocation;
     private boolean feastSpawned = false;
     
+    // Cache for last known target locations to prevent unnecessary updates
+    private final Map<UUID, Location> lastKnownTargets = new ConcurrentHashMap<>();
+    
     public CompassTracker(Plugin plugin, Map<UUID, GameParty> playerParties) {
         this.plugin = plugin;
         this.playerParties = playerParties;
@@ -121,18 +124,40 @@ public class CompassTracker implements Listener {
         Location targetLocation = getTargetLocation(player, mode);
         
         if (targetLocation != null) {
-            ItemStack mainHand = player.getInventory().getItemInMainHand();
-            if (mainHand.getType() == Material.COMPASS) {
-                ItemMeta meta = mainHand.getItemMeta();
-                if (meta instanceof CompassMeta) {
-                    CompassMeta compassMeta = (CompassMeta) meta;
-                    
-                    // Only update if the target location has changed significantly (more than 5 blocks)
-                    Location currentLodestone = compassMeta.getLodestone();
-                    if (currentLodestone == null || currentLodestone.distance(targetLocation) > 5.0) {
+            UUID playerId = player.getUniqueId();
+            Location lastKnownTarget = lastKnownTargets.get(playerId);
+            
+            // Only update if the target has moved significantly (more than 15 blocks)
+            // This prevents wild compass spinning when targets aren't moving
+            if (lastKnownTarget == null || 
+                lastKnownTarget.getWorld() != targetLocation.getWorld() ||
+                lastKnownTarget.distance(targetLocation) > 15.0) {
+                
+                // Update the cache
+                lastKnownTargets.put(playerId, targetLocation.clone());
+                
+                // Update compass in main hand
+                ItemStack mainHand = player.getInventory().getItemInMainHand();
+                if (mainHand.getType() == Material.COMPASS) {
+                    ItemMeta meta = mainHand.getItemMeta();
+                    if (meta instanceof CompassMeta) {
+                        CompassMeta compassMeta = (CompassMeta) meta;
                         compassMeta.setLodestone(targetLocation);
                         compassMeta.setLodestoneTracked(true);
                         mainHand.setItemMeta(compassMeta);
+                        player.updateInventory();
+                    }
+                }
+                
+                // Also check inventory slot 8 (where compass is given)
+                ItemStack inventoryCompass = player.getInventory().getItem(8);
+                if (inventoryCompass != null && inventoryCompass.getType() == Material.COMPASS) {
+                    ItemMeta meta = inventoryCompass.getItemMeta();
+                    if (meta instanceof CompassMeta) {
+                        CompassMeta compassMeta = (CompassMeta) meta;
+                        compassMeta.setLodestone(targetLocation);
+                        compassMeta.setLodestoneTracked(true);
+                        inventoryCompass.setItemMeta(compassMeta);
                     }
                 }
             }
@@ -326,7 +351,18 @@ public class CompassTracker implements Listener {
      * Remove a player's tracking data
      */
     public void removePlayer(UUID playerId) {
-        playerTrackingModes.remove(playerId);
+        if (playerId != null) {
+            playerTrackingModes.remove(playerId);
+            lastKnownTargets.remove(playerId);
+        }
+    }
+
+    /**
+     * Clear all player tracking data
+     */
+    public void clearAllPlayers() {
+        playerTrackingModes.clear();
+        lastKnownTargets.clear();
     }
 
     /**

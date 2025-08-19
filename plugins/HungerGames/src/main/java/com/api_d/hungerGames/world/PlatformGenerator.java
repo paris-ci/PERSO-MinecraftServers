@@ -57,8 +57,15 @@ public class PlatformGenerator {
             }
         }
         
+        // Get spawn items for debugging
+        List<String> spawnItems = config.getSpawnItems();
+        logger.info("Spawn items configured: " + spawnItems.size() + " items");
+        for (String item : spawnItems) {
+            logger.info("  - " + item);
+        }
+        
         // Generate central fountain/pillar with chests
-        generateCentralStructure(center, config.getSpawnItems());
+        generateCentralStructure(center, spawnItems);
         
         logger.info("Spawn platform generated successfully");
     }
@@ -75,21 +82,38 @@ public class PlatformGenerator {
         // Find a suitable location
         Location feastCenter = findSuitableFeastLocation(world, worldCenter, worldBorderSize, borderDistance);
         
-        // Create the platform
+        // Find the highest point in the area to create a flat platform
+        int maxHeight = feastCenter.getBlockY();
+        for (int x = -radius; x <= radius; x++) {
+            for (int z = -radius; z <= radius; z++) {
+                double distance = Math.sqrt(x * x + z * z);
+                if (distance <= radius) {
+                    int height = world.getHighestBlockYAt(feastCenter.getBlockX() + x, feastCenter.getBlockZ() + z);
+                    if (height > maxHeight) {
+                        maxHeight = height;
+                    }
+                }
+            }
+        }
+        
+        // Set platform height to be above the highest point in the area
+        int platformHeight = maxHeight + 2;
+        feastCenter.setY(platformHeight);
+        
+        logger.info("Creating flat feast platform at height " + platformHeight + " with radius " + radius);
+        
+        // Create the platform as a flat surface
         for (int x = -radius; x <= radius; x++) {
             for (int z = -radius; z <= radius; z++) {
                 double distance = Math.sqrt(x * x + z * z);
                 
                 if (distance <= radius) {
-                    // Find the topmost solid block
-                    int y = world.getHighestBlockYAt(feastCenter.getBlockX() + x, feastCenter.getBlockZ() + z);
-                    
-                    // Create stone platform
-                    Block block = world.getBlockAt(feastCenter.getBlockX() + x, y + 1, feastCenter.getBlockZ() + z);
+                    // Create stone platform at consistent height
+                    Block block = world.getBlockAt(feastCenter.getBlockX() + x, platformHeight, feastCenter.getBlockZ() + z);
                     block.setType(Material.STONE);
                     
                     // Clear blocks above the platform
-                    for (int clearY = y + 2; clearY <= y + 10; clearY++) {
+                    for (int clearY = platformHeight + 1; clearY <= platformHeight + 10; clearY++) {
                         Block above = world.getBlockAt(feastCenter.getBlockX() + x, clearY, feastCenter.getBlockZ() + z);
                         if (above.getType() != Material.AIR) {
                             above.setType(Material.AIR);
@@ -99,14 +123,17 @@ public class PlatformGenerator {
             }
         }
         
-        // Update feast center to the platform level
-        int platformY = world.getHighestBlockYAt(feastCenter.getBlockX(), feastCenter.getBlockZ()) + 1;
-        feastCenter.setY(platformY);
+        // Get feast items for debugging
+        List<String> feastItems = config.getFeastItems();
+        logger.info("Feast items configured: " + feastItems.size() + " items");
+        for (String item : feastItems) {
+            logger.info("  - " + item);
+        }
         
         // Generate central structure with feast loot
-        generateCentralStructure(feastCenter, config.getFeastItems());
+        generateCentralStructure(feastCenter, feastItems);
         
-        logger.info("Feast platform generated at " + feastCenter.toString());
+        logger.info("Feast platform generated successfully at " + feastCenter.toString());
         return feastCenter;
     }
     
@@ -163,19 +190,25 @@ public class PlatformGenerator {
         int centerY = center.getBlockY();
         int centerZ = center.getBlockZ();
         
+        logger.info("Generating central structure at " + center.toString() + " with " + lootItems.size() + " loot items");
+        
         // Create a small pillar in the center
         for (int y = 1; y <= 4; y++) {
             Block pillarBlock = world.getBlockAt(centerX, centerY + y, centerZ);
             if (y <= 2) {
                 pillarBlock.setType(Material.STONE_BRICKS);
+                logger.info("Placed stone brick at " + centerX + ", " + (centerY + y) + ", " + centerZ);
             } else {
                 pillarBlock.setType(Material.COBBLESTONE_WALL);
+                logger.info("Placed cobblestone wall at " + centerX + ", " + (centerY + y) + ", " + centerZ);
             }
         }
         
         // Add chests around the pillar (two levels)
         addChestsAroundPillar(center, lootItems, 1); // Ground level
         addChestsAroundPillar(center, lootItems, 2); // Upper level
+        
+        logger.info("Central structure generation completed");
     }
     
     /**
@@ -204,17 +237,41 @@ public class PlatformGenerator {
             Block chestBlock = world.getBlockAt(chestLocation);
             chestBlock.setType(Material.CHEST);
             
-            // Fill the chest with loot
+            // Force block update to ensure chest is properly placed
+            chestBlock.getState().update(true, false);
+            
+            // Try to fill the chest immediately
             if (chestBlock.getState() instanceof Chest chest) {
+                logger.info("Filling chest at " + chestLocation.toString() + " with " + lootItems.size() + " items");
                 fillChestWithLoot(chest, lootItems);
+            } else {
+                logger.warning("Failed to get chest state at " + chestLocation.toString() + " - retrying...");
+                
+                // If immediate filling fails, try again after a short delay
+                try {
+                    Thread.sleep(100); // Wait 100ms
+                    Block retryBlock = world.getBlockAt(chestLocation);
+                    if (retryBlock.getState() instanceof Chest retryChest) {
+                        logger.info("Retry successful - filling chest at " + chestLocation.toString());
+                        fillChestWithLoot(retryChest, lootItems);
+                    } else {
+                        logger.warning("Retry failed - chest still not accessible at " + chestLocation.toString());
+                    }
+                } catch (InterruptedException e) {
+                    logger.warning("Interrupted while waiting to retry chest filling at " + chestLocation.toString());
+                }
             }
         }
+        
+        logger.info("Added " + chestLocations.length + " chests at level " + level + " around center " + center.toString());
     }
     
     /**
      * Fill a chest with loot items
      */
     private void fillChestWithLoot(Chest chest, List<String> lootItems) {
+        logger.info("Filling chest at " + chest.getLocation().toString() + " with " + lootItems.size() + " loot items");
+        
         for (String itemString : lootItems) {
             try {
                 // Parse item string format: "MATERIAL:AMOUNT"
@@ -238,13 +295,15 @@ public class PlatformGenerator {
                 }
                 
                 chest.getInventory().setItem(slot, item);
+                logger.info("Added " + amount + "x " + material.name() + " to chest slot " + slot);
                 
             } catch (IllegalArgumentException e) {
-                logger.warning("Invalid material in loot items: " + itemString);
+                logger.warning("Invalid material in loot items: " + itemString + " - " + e.getMessage());
             }
         }
         
         chest.update();
+        logger.info("Chest filled successfully with " + lootItems.size() + " items");
     }
     
     /**

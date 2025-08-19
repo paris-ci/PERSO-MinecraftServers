@@ -91,8 +91,8 @@ services:
       POSTGRES_DB: minecraft
       PGDATA: /var/lib/postgresql/data
       PG_VERSION: 17
-    # ports:
-    #   - "127.0.0.1:5432:5432/tcp"
+    ports:
+      - "127.0.0.1:54320:5432/tcp"
     volumes:
       - ./opt/postgres:/var/lib/postgresql/data
     networks:

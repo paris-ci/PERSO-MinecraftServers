@@ -103,10 +103,16 @@ public class GameProtectionManager implements Listener {
      * Check if world interaction should be blocked
      */
     private boolean shouldBlockInteraction() {
-        return config.isWorldInteractionBlocked() && 
+        GameState currentState = gameManager.getCurrentState();
+        
+        // Block interactions when:
+        // 1. World interaction is blocked in config AND game isn't active, OR
+        // 2. Game is in STARTING state (players are frozen)
+        return (config.isWorldInteractionBlocked() && 
                (!gameManager.isGameRunning() || 
-                gameManager.getCurrentState() == null ||
-                !gameManager.getCurrentState().isGameActive());
+                currentState == null ||
+                !currentState.isGameActive())) ||
+               (currentState == GameState.STARTING);
     }
     
     /**

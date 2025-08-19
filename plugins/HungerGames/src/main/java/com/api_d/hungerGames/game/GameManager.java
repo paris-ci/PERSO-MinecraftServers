@@ -860,7 +860,7 @@ public class GameManager implements Listener {
         borderManager.reset();
         finalFightManager.reset();
         spectatorManager.reset();
-        compassTracker.removePlayer(null); // Clear all players
+        compassTracker.clearAllPlayers(); // Clear all players
         
         // Reset state machine
         stateMachine.reset();
