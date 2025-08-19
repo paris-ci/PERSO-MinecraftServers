@@ -64,7 +64,7 @@ public class FeastManager {
                     );
                 }
             }
-        }.runTaskTimer(plugin, 1200, 1200); // Every 2 minutes
+        }.runTaskTimer(plugin, 2400, 2400); // Every 2 minutes
     }
     
     /**

@@ -638,6 +638,11 @@ public class GameManager implements Listener {
      * Schedule PvP to be enabled
      */
     private void schedulePvpEnable() {
+        // Cancel any existing PvP enable task
+        if (pvpEnableTask != null) {
+            pvpEnableTask.cancel();
+        }
+        
         pvpEnableTask = new BukkitRunnable() {
             @Override
             public void run() {
@@ -667,6 +672,11 @@ public class GameManager implements Listener {
     private void scheduleFeastSpawn() {
         if (!config.isFeastEnabled()) {
             return;
+        }
+        
+        // Cancel any existing feast spawn task
+        if (feastSpawnTask != null) {
+            feastSpawnTask.cancel();
         }
         
         // Start feast reminders
@@ -722,6 +732,11 @@ public class GameManager implements Listener {
      * Start awarding survival credits
      */
     private void startSurvivalCredits() {
+        // Cancel any existing survival credit task
+        if (survivalTask != null) {
+            survivalTask.cancel();
+        }
+        
         survivalTask = new BukkitRunnable() {
             @Override
             public void run() {
@@ -743,6 +758,11 @@ public class GameManager implements Listener {
      * Start the final fight timer
      */
     private void startFinalFightTimer() {
+        // Cancel any existing final fight task
+        if (finalFightTask != null) {
+            finalFightTask.cancel();
+        }
+        
         finalFightTask = new BukkitRunnable() {
             @Override
             public void run() {
@@ -965,6 +985,82 @@ public class GameManager implements Listener {
                 player.setAllowFlight(false);
                 player.setFlying(false);
             }
+        } else if (event.getNewState() == GameState.ACTIVE) {
+            // Game is now active, disable protection features
+            logger.info("Game is now active - disabling protection features");
+            protectionManager.updateAllPlayersFlight();
+            
+            // Schedule PvP enable if not already enabled
+            if (!pvpEnabled) {
+                schedulePvpEnable();
+            }
+            
+            // Schedule feast spawn if not already spawned
+            if (!feastSpawned && config.isFeastEnabled()) {
+                scheduleFeastSpawn();
+            }
+            
+            // Start survival credit task
+            startSurvivalCredits();
+            
+        } else if (event.getNewState() == GameState.FEAST) {
+            // Feast state activated
+            logger.info("Feast state activated");
+            
+            // Update compass tracker with feast location
+            if (feastLocation != null) {
+                compassTracker.setFeastLocation(feastLocation);
+            }
+            
+            // Start border shrinking after feast
+            if (borderManager != null && !borderManager.isBorderShrinking()) {
+                borderManager.startBorderShrinking();
+            }
+            
+            // Start final fight timer
+            startFinalFightTimer();
+            
+        } else if (event.getNewState() == GameState.BORDER_SHRINKING) {
+            // Border shrinking state activated
+            logger.info("Border shrinking state activated");
+            
+            // Ensure border is actually shrinking
+            if (borderManager != null && !borderManager.isBorderShrinking()) {
+                borderManager.startBorderShrinking();
+            }
+            
+        } else if (event.getNewState() == GameState.FINAL_FIGHT) {
+            // Final fight state activated
+            logger.info("Final fight state activated");
+            
+            // Ensure final fight is actually active
+            if (finalFightManager != null && !finalFightManager.isFinalFightActive()) {
+                finalFightManager.startFinalFight();
+            }
+            
+        } else if (event.getNewState() == GameState.ENDING) {
+            // Game ending state activated
+            logger.info("Game ending state activated");
+            
+            // Cancel all ongoing tasks
+            cancelAllTasks();
+            
+            // Announce winner if there's only one player left
+            if (alivePlayers.size() == 1) {
+                UUID winnerId = alivePlayers.iterator().next();
+                Player winner = Bukkit.getPlayer(winnerId);
+                if (winner != null) {
+                    broadcastMessage("§6§l" + winner.getName() + " §ahas won the Hunger Games!");
+                }
+            }
+            
+        } else if (event.getNewState() == GameState.FINISHED) {
+            // Game finished state activated
+            logger.info("Game finished state activated");
+            
+            // Clean up and reset for next game
+            cancelAllTasks();
+            
         } else if (event.getNewState().isGameActive()) {
             // Game is now active, disable protection features
             logger.info("Game is now active - disabling protection features");
@@ -1089,9 +1185,45 @@ public class GameManager implements Listener {
         }
         
         logger.info("Admin forcing state transition to: " + targetState.getDisplayName());
-        stateMachine.transitionTo(targetState, "Admin forced transition");
         
-        // The state machine will handle the transition logic
+        // Execute the actual game logic for the target state
+        switch (targetState) {
+            case FEAST:
+                // Force spawn feast and transition to FEAST state
+                if (!feastSpawned) {
+                    forceSpawnFeast();
+                } else {
+                    // Feast already spawned, just transition state
+                    stateMachine.transitionTo(targetState, "Admin forced transition");
+                }
+                break;
+                
+            case BORDER_SHRINKING:
+                // Force start border shrinking and transition to BORDER_SHRINKING state
+                forceStartBorderShrinking();
+                break;
+                
+            case FINAL_FIGHT:
+                // Force start final fight and transition to FINAL_FIGHT state
+                forceStartFinalFight();
+                break;
+                
+            case ENDING:
+                // Force end the game and transition to ENDING state
+                forceEndGame();
+                break;
+                
+            case FINISHED:
+                // Force end the game and transition to FINISHED state
+                forceEndGame();
+                stateMachine.transitionTo(targetState, "Admin forced transition");
+                break;
+                
+            default:
+                // For other states, just transition without additional logic
+                stateMachine.transitionTo(targetState, "Admin forced transition");
+                break;
+        }
     }
     
     /**
@@ -1127,7 +1259,12 @@ public class GameManager implements Listener {
             
             // Spawn feast immediately
             World world = Bukkit.getWorlds().get(0);
-            feastManager.spawnFeast(world, spawnLocation);
+            feastLocation = feastManager.spawnFeast(world, spawnLocation);
+            
+            // Update compass tracker with feast location
+            if (feastLocation != null) {
+                compassTracker.setFeastLocation(feastLocation);
+            }
             
             // Broadcast feast spawned
             Location feastLoc = feastManager.getFeastLocation();
@@ -1136,6 +1273,9 @@ public class GameManager implements Listener {
             } else {
                 broadcastMessage("§6The feast has spawned!");
             }
+            
+            // Transition to FEAST state
+            stateMachine.transitionTo(GameState.FEAST, "Admin force spawned feast");
         }
     }
     
@@ -1143,36 +1283,40 @@ public class GameManager implements Listener {
      * Force start border shrinking
      */
     public void forceStartBorderShrinking() {
-        if (stateMachine.getCurrentState() == GameState.ACTIVE || 
-            stateMachine.getCurrentState() == GameState.FEAST) {
-            
-            logger.info("Admin force started border shrinking");
-            
-            // Cancel any existing border task
-            if (borderShrinkTask != null) {
-                borderShrinkTask.cancel();
-            }
-            
-            // Transition to border shrinking state
-            stateMachine.transitionTo(GameState.BORDER_SHRINKING, "Admin force started border shrinking");
+        logger.info("Admin force started border shrinking");
+        
+        // Cancel any existing border task
+        if (borderShrinkTask != null) {
+            borderShrinkTask.cancel();
         }
+        
+        // Start border shrinking regardless of current state
+        if (borderManager != null) {
+            borderManager.startBorderShrinking();
+        }
+        
+        // Transition to border shrinking state
+        stateMachine.transitionTo(GameState.BORDER_SHRINKING, "Admin force started border shrinking");
     }
     
     /**
      * Force start final fight
      */
     public void forceStartFinalFight() {
-        if (stateMachine.getCurrentState() == GameState.BORDER_SHRINKING) {
-            logger.info("Admin force started final fight");
-            
-            // Cancel any existing final fight task
-            if (finalFightTask != null) {
-                finalFightTask.cancel();
-            }
-            
-            // Transition to final fight state
-            stateMachine.transitionTo(GameState.FINAL_FIGHT, "Admin force started final fight");
+        logger.info("Admin force started final fight");
+        
+        // Cancel any existing final fight task
+        if (finalFightTask != null) {
+            finalFightTask.cancel();
         }
+        
+        // Start final fight regardless of current state
+        if (finalFightManager != null) {
+            finalFightManager.startFinalFight();
+        }
+        
+        // Transition to final fight state
+        stateMachine.transitionTo(GameState.FINAL_FIGHT, "Admin force started final fight");
     }
     
     /**
