@@ -79,7 +79,7 @@ public class GameConfig {
     }
     
     public int getWorldBorderInitialSize() {
-        return config.getInt("world.world_border_initial_size", 1000);
+        return config.getInt("world.world_border_initial_size", 300);
     }
     
     public int getWorldBorderMinimumSize() {
@@ -87,7 +87,7 @@ public class GameConfig {
     }
     
     public double getWorldBorderShrinkSpeed() {
-        return config.getDouble("world.world_border_shrink_speed", 0.5);
+        return config.getDouble("world.world_border_shrink_speed", 3.5);
     }
     
     // Protection settings
