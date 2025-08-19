@@ -9,6 +9,7 @@ import com.api_d.hungerGames.game.GameState;
 import com.api_d.hungerGames.kits.KitManager;
 import com.api_d.hungerGames.player.PlayerManager;
 import com.api_d.hungerGames.world.PlatformGenerator;
+import com.api_d.hungerGames.util.HGLogger;
 import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -31,12 +32,18 @@ public final class HungerGames extends JavaPlugin implements Listener {
     private GameManager gameManager;
     private PlatformGenerator platformGenerator;
     
+    // Custom logger with [HG] prefix
+    private HGLogger hgLogger;
+    
     // Plugin state
     private boolean initialized = false;
 
     @Override
     public void onEnable() {
-        getLogger().info("Starting HungerGames plugin...");
+        // Initialize custom logger first
+        hgLogger = new HGLogger(this);
+        
+        hgLogger.info("Starting HungerGames plugin...");
         
         try {
             // Initialize core systems
@@ -50,13 +57,13 @@ public final class HungerGames extends JavaPlugin implements Listener {
             initializeWorld();
             
             // Don't start the game automatically - wait for players to join
-            getLogger().info("Plugin initialized. Waiting for players to join before starting game...");
+            hgLogger.info("Plugin initialized. Waiting for players to join before starting game...");
             
             initialized = true;
-            getLogger().info("HungerGames plugin enabled successfully!");
+            hgLogger.info("HungerGames plugin enabled successfully!");
             
         } catch (Exception e) {
-            getLogger().log(Level.SEVERE, "Failed to initialize HungerGames plugin", e);
+            hgLogger.log(Level.SEVERE, "Failed to initialize HungerGames plugin", e);
             getServer().getPluginManager().disablePlugin(this);
         }
     }
@@ -65,16 +72,16 @@ public final class HungerGames extends JavaPlugin implements Listener {
      * Initialize configuration system
      */
     private void initializeConfig() {
-        getLogger().info("Initializing configuration...");
+        hgLogger.info("Initializing configuration...");
         config = new GameConfig(this);
-        getLogger().info("Configuration initialized");
+        hgLogger.info("Configuration initialized");
     }
     
     /**
      * Initialize database connection and schema
      */
     private void initializeDatabase() {
-        getLogger().info("Initializing database...");
+        hgLogger.info("Initializing database...");
         
         databaseManager = new DatabaseManager(
             this,
@@ -89,76 +96,76 @@ public final class HungerGames extends JavaPlugin implements Listener {
             throw new RuntimeException("Failed to initialize database");
         }
         
-        getLogger().info("Database initialized successfully");
+        hgLogger.info("Database initialized successfully");
     }
     
     /**
      * Initialize all manager classes
      */
     private void initializeManagers() {
-        getLogger().info("Initializing managers...");
+        hgLogger.info("Initializing managers...");
         
         // Initialize player manager
-        playerManager = new PlayerManager(databaseManager, getLogger());
+        playerManager = new PlayerManager(databaseManager, hgLogger.getBukkitLogger());
         
         // Initialize kit manager
         kitManager = new KitManager();
         
         // Initialize platform generator
-        platformGenerator = new PlatformGenerator(config, getLogger());
+        platformGenerator = new PlatformGenerator(config, hgLogger.getBukkitLogger());
         
         // Initialize game manager
         gameManager = new GameManager(this, config, databaseManager, playerManager, kitManager);
         
-        getLogger().info("All managers initialized");
+        hgLogger.info("All managers initialized");
     }
     
     /**
      * Initialize event listeners
      */
     private void initializeEventListeners() {
-        getLogger().info("Registering event listeners...");
+        hgLogger.info("Registering event listeners...");
         
         // Register this plugin as a listener for basic events
         Bukkit.getPluginManager().registerEvents(this, this);
         
         // Game manager is already registered in its constructor
         
-        getLogger().info("Event listeners registered");
+        hgLogger.info("Event listeners registered");
     }
     
     /**
      * Initialize command handlers
      */
     private void initializeCommands() {
-        getLogger().info("Registering commands...");
+        hgLogger.info("Registering commands...");
         
         // Register commands
         getCommand("credits").setExecutor(new CreditsCommand(this));
         getCommand("kit").setExecutor(new KitCommand(this));
         
-        getLogger().info("Commands registered");
+        hgLogger.info("Commands registered");
     }
     
     /**
      * Initialize the world for the game
      */
     private void initializeWorld() {
-        getLogger().info("Setting up world for Hunger Games...");
+        hgLogger.info("Setting up world for Hunger Games...");
         
         // Generate spawn platform
         if (Bukkit.getWorlds().size() > 0) {
             platformGenerator.generateSpawnPlatform(Bukkit.getWorlds().get(0).getSpawnLocation());
         }
         
-        getLogger().info("World setup completed");
+        hgLogger.info("World setup completed");
     }
     
     /**
      * Start the hunger games
      */
     private void startGame() {
-        getLogger().info("Starting Hunger Games match...");
+        hgLogger.info("Starting Hunger Games match...");
         gameManager.initializeGame();
     }
     
@@ -169,11 +176,11 @@ public final class HungerGames extends JavaPlugin implements Listener {
         // Only start the game if it hasn't been started yet
         if (!gameManager.isGameRunning()) {
             int onlinePlayers = Bukkit.getOnlinePlayers().size();
-            getLogger().info("Player joined. Online players: " + onlinePlayers);
+            hgLogger.info("Player joined. Online players: " + onlinePlayers);
             
             // Start the game when the first player joins
             if (onlinePlayers >= 1) {
-                getLogger().info("First player joined. Starting Hunger Games match...");
+                hgLogger.info("First player joined. Starting Hunger Games match...");
                 startGame();
             }
         }
@@ -187,11 +194,11 @@ public final class HungerGames extends JavaPlugin implements Listener {
             GameState currentState = gameManager.getCurrentState();
             if (currentState.canPlayersJoin()) {
                 int onlinePlayers = Bukkit.getOnlinePlayers().size();
-                getLogger().info("Player left. Online players: " + onlinePlayers);
+                hgLogger.info("Player left. Online players: " + onlinePlayers);
                 
                 // If we have less than 2 players and the game is still in waiting state, cancel it
                 if (onlinePlayers < 2) {
-                    getLogger().info("Not enough players to continue. Cancelling game...");
+                    hgLogger.info("Not enough players to continue. Cancelling game...");
                     gameManager.cancelGame();
                 }
             }
@@ -200,7 +207,7 @@ public final class HungerGames extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
-        getLogger().info("Shutting down HungerGames plugin...");
+        hgLogger.info("Shutting down HungerGames plugin...");
         
         try {
             // Save all player data
@@ -213,10 +220,10 @@ public final class HungerGames extends JavaPlugin implements Listener {
                 databaseManager.shutdown();
             }
             
-            getLogger().info("HungerGames plugin disabled successfully");
+            hgLogger.info("HungerGames plugin disabled successfully");
             
         } catch (Exception e) {
-            getLogger().log(Level.SEVERE, "Error during plugin shutdown", e);
+            hgLogger.log(Level.SEVERE, "Error during plugin shutdown", e);
         }
     }
     
@@ -233,10 +240,10 @@ public final class HungerGames extends JavaPlugin implements Listener {
             // Load player data
             playerManager.loadPlayer(event.getPlayer()).thenAccept(player -> {
                 if (player != null) {
-                    getLogger().info("Loaded player data for " + event.getPlayer().getName() + 
+                    hgLogger.info("Loaded player data for " + event.getPlayer().getName() + 
                                    " (Credits: " + player.getCredits() + ")");
                 } else {
-                    getLogger().warning("Failed to load player data for " + event.getPlayer().getName());
+                    hgLogger.warning("Failed to load player data for " + event.getPlayer().getName());
                 }
             });
             
@@ -247,7 +254,7 @@ public final class HungerGames extends JavaPlugin implements Listener {
             event.setJoinMessage(config.getPrefix() + "§e" + event.getPlayer().getName() + " joined the Hunger Games!");
             
         } catch (Exception e) {
-            getLogger().log(Level.SEVERE, "Error handling player join: " + event.getPlayer().getName(), e);
+            hgLogger.log(Level.SEVERE, "Error handling player join: " + event.getPlayer().getName(), e);
         }
     }
     
@@ -276,7 +283,7 @@ public final class HungerGames extends JavaPlugin implements Listener {
             event.setQuitMessage(config.getPrefix() + "§7" + event.getPlayer().getName() + " left the Hunger Games!");
             
         } catch (Exception e) {
-            getLogger().log(Level.SEVERE, "Error handling player quit: " + event.getPlayer().getName(), e);
+            hgLogger.log(Level.SEVERE, "Error handling player quit: " + event.getPlayer().getName(), e);
         }
     }
     

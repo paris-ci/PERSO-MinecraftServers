@@ -2,9 +2,9 @@ package com.api_d.hungerGames.config;
 
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.Plugin;
+import com.api_d.hungerGames.util.HGLogger;
 
 import java.util.List;
-import java.util.logging.Logger;
 
 /**
  * Manages plugin configuration settings
@@ -13,11 +13,11 @@ public class GameConfig {
     
     private final Plugin plugin;
     private final FileConfiguration config;
-    private final Logger logger;
+    private final HGLogger logger;
     
     public GameConfig(Plugin plugin) {
         this.plugin = plugin;
-        this.logger = plugin.getLogger();
+        this.logger = new HGLogger(plugin);
         
         // Save default config if it doesn't exist
         plugin.saveDefaultConfig();

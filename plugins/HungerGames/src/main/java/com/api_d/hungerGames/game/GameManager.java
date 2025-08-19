@@ -16,12 +16,12 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
+import com.api_d.hungerGames.util.HGLogger;
 
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Main game manager that coordinates the entire Hunger Games flow
@@ -34,7 +34,7 @@ public class GameManager implements Listener {
     private final PlayerManager playerManager;
     private final KitManager kitManager;
     private final GameStateMachine stateMachine;
-    private final Logger logger;
+    private final HGLogger logger;
     
     // Game state
     private Game currentGame;
@@ -65,7 +65,7 @@ public class GameManager implements Listener {
         this.databaseManager = databaseManager;
         this.playerManager = playerManager;
         this.kitManager = kitManager;
-        this.logger = plugin.getLogger();
+        this.logger = new HGLogger(plugin);
         this.stateMachine = new GameStateMachine(plugin, config.shouldLogStateChanges());
         
         // Register event listeners

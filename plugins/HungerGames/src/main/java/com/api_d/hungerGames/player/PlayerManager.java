@@ -2,6 +2,7 @@ package com.api_d.hungerGames.player;
 
 import com.api_d.hungerGames.database.DatabaseManager;
 import com.api_d.hungerGames.database.models.Player;
+import com.api_d.hungerGames.util.HGLogger;
 
 import java.sql.*;
 import java.util.HashMap;
@@ -9,7 +10,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Manages player data, credits, and database operations
@@ -17,12 +17,12 @@ import java.util.logging.Logger;
 public class PlayerManager {
     
     private final DatabaseManager databaseManager;
-    private final Logger logger;
+    private final HGLogger logger;
     private final Map<UUID, Player> playerCache = new HashMap<>();
     
-    public PlayerManager(DatabaseManager databaseManager, Logger logger) {
+    public PlayerManager(DatabaseManager databaseManager, java.util.logging.Logger logger) {
         this.databaseManager = databaseManager;
-        this.logger = logger;
+        this.logger = new HGLogger(logger);
     }
     
     /**

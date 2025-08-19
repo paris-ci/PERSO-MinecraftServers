@@ -341,7 +341,7 @@ Not in this plugin
 In the future, a website will be available for players to see their statistics.
 
 - Configuration: You mention several config variables (like %spawn_radius, %feast_items) - are you planning a comprehensive config.yml?
-Yes! The plugin should create a default config.yml in it's directory to enable configuration to be adusted.
+Yes! The plugin should create a default config.yml in its directory to enable configuration to be adjusted.
 
 - Sound Effects: Some kits mention sounds (berserker rage mode) - are you planning custom sound effects or using vanilla Minecraft sounds?
 Vanilla sounds only

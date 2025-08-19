@@ -3,11 +3,11 @@ package com.api_d.hungerGames.game;
 import com.api_d.hungerGames.events.GameStateChangeEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
+import com.api_d.hungerGames.util.HGLogger;
 
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.logging.Logger;
 
 /**
  * Manages game state transitions and validates state changes
@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 public class GameStateMachine {
     
     private final Plugin plugin;
-    private final Logger logger;
+    private final HGLogger logger;
     private GameState currentState;
     private final boolean logStateChanges;
     
@@ -57,7 +57,7 @@ public class GameStateMachine {
     
     public GameStateMachine(Plugin plugin, boolean logStateChanges) {
         this.plugin = plugin;
-        this.logger = plugin.getLogger();
+        this.logger = new HGLogger(plugin);
         this.logStateChanges = logStateChanges;
         this.currentState = GameState.WAITING;
         

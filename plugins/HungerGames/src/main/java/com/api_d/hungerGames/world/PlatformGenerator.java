@@ -10,7 +10,7 @@ import org.bukkit.inventory.ItemStack;
 
 import java.util.List;
 import java.util.Random;
-import java.util.logging.Logger;
+import com.api_d.hungerGames.util.HGLogger;
 
 /**
  * Generates spawn and feast platforms
@@ -18,12 +18,12 @@ import java.util.logging.Logger;
 public class PlatformGenerator {
     
     private final GameConfig config;
-    private final Logger logger;
+    private final HGLogger logger;
     private final Random random;
     
-    public PlatformGenerator(GameConfig config, Logger logger) {
+    public PlatformGenerator(GameConfig config, java.util.logging.Logger logger) {
         this.config = config;
-        this.logger = logger;
+        this.logger = new HGLogger(logger);
         this.random = new Random();
     }
     

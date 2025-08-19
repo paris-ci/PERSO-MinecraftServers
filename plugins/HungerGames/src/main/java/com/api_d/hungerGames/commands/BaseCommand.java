@@ -1,6 +1,7 @@
 package com.api_d.hungerGames.commands;
 
 import com.api_d.hungerGames.HungerGames;
+import com.api_d.hungerGames.util.HGLogger;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -23,7 +24,8 @@ public abstract class BaseCommand implements CommandExecutor {
         try {
             return execute(sender, command, label, args);
         } catch (Exception e) {
-            plugin.getLogger().severe("Error executing command '" + label + "': " + e.getMessage());
+            HGLogger hgLogger = new HGLogger(plugin);
+            hgLogger.severe("Error executing command '" + label + "': " + e.getMessage());
             sender.sendMessage(ChatColor.RED + "An error occurred while executing the command.");
             return true;
         }

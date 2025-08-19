@@ -4,6 +4,7 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
+import com.api_d.hungerGames.util.HGLogger;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -11,7 +12,6 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Manages database connections and schema creation for the HungerGames plugin
@@ -19,7 +19,7 @@ import java.util.logging.Logger;
 public class DatabaseManager {
     
     private final Plugin plugin;
-    private final Logger logger;
+    private final HGLogger logger;
     private HikariDataSource dataSource;
     private final String host;
     private final int port;
@@ -29,7 +29,7 @@ public class DatabaseManager {
     
     public DatabaseManager(Plugin plugin, String host, int port, String database, String username, String password) {
         this.plugin = plugin;
-        this.logger = plugin.getLogger();
+        this.logger = new HGLogger(plugin);
         this.host = host;
         this.port = port;
         this.database = database;
