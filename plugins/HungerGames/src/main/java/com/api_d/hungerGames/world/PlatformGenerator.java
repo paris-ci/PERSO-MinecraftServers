@@ -9,6 +9,7 @@ import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.entity.Item;
 
 import java.util.List;
 import java.util.Random;
@@ -68,6 +69,9 @@ public class PlatformGenerator {
         
         // Generate central fountain/pillar with chests
         generateCentralStructure(center, spawnItems);
+        
+        // Clear any dropped items around the platform
+        clearDroppedItemsAroundPlatform(center, radius + 2);
         
         logger.info("Spawn platform generated successfully");
     }
@@ -134,6 +138,9 @@ public class PlatformGenerator {
         
         // Generate central structure with feast loot
         generateCentralStructure(feastCenter, feastItems);
+        
+        // Clear any dropped items around the platform
+        clearDroppedItemsAroundPlatform(feastCenter, radius + 2);
         
         logger.info("Feast platform generated successfully at " + feastCenter.toString());
         return feastCenter;
@@ -345,5 +352,29 @@ public class PlatformGenerator {
         }
         
         logger.info("Cleared area at " + center.toString() + " with radius " + radius);
+    }
+
+    /**
+     * Clear dropped items around a platform to prevent clutter
+     */
+    private void clearDroppedItemsAroundPlatform(Location center, int radius) {
+        World world = center.getWorld();
+        
+        // Get all entities in the area
+        for (org.bukkit.entity.Entity entity : world.getNearbyEntities(center, radius, 20, radius)) {
+            if (entity instanceof Item) {
+                Item item = (Item) entity;
+                Location itemLocation = item.getLocation();
+                
+                // Check if the item is within the platform area
+                double distance = center.distance(itemLocation);
+                if (distance <= radius) {
+                    logger.info("Removing dropped item " + item.getItemStack().getType().name() + " at " + itemLocation.toString());
+                    item.remove();
+                }
+            }
+        }
+        
+        logger.info("Cleared dropped items around platform at " + center.toString() + " with radius " + radius);
     }
 }

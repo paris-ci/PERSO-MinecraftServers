@@ -57,6 +57,64 @@ public class HGLogger {
     }
     
     /**
+     * Enhanced error logging with stack trace
+     */
+    public void error(String message, Throwable throwable) {
+        logger.severe(PREFIX + "ERROR: " + message);
+        if (throwable != null) {
+            logger.severe(PREFIX + "Exception: " + throwable.getClass().getSimpleName() + ": " + throwable.getMessage());
+            logger.severe(PREFIX + "Stack trace:");
+            for (StackTraceElement element : throwable.getStackTrace()) {
+                logger.severe(PREFIX + "  at " + element.toString());
+            }
+        }
+    }
+    
+    /**
+     * Debug logging with current thread and method information
+     */
+    public void debug(String message) {
+        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+        if (stackTrace.length > 2) {
+            StackTraceElement caller = stackTrace[2];
+            String callerInfo = caller.getClassName() + "." + caller.getMethodName() + ":" + caller.getLineNumber();
+            logger.fine(PREFIX + "[DEBUG] " + callerInfo + " - " + message);
+        } else {
+            logger.fine(PREFIX + "[DEBUG] " + message);
+        }
+    }
+    
+    /**
+     * Log method entry with parameters
+     */
+    public void enter(String methodName, Object... params) {
+        StringBuilder paramStr = new StringBuilder();
+        if (params != null && params.length > 0) {
+            for (int i = 0; i < params.length; i += 2) {
+                if (i + 1 < params.length) {
+                    if (paramStr.length() > 0) paramStr.append(", ");
+                    paramStr.append(params[i]).append("=").append(params[i + 1]);
+                }
+            }
+        }
+        logger.fine(PREFIX + "ENTER: " + methodName + "(" + paramStr.toString() + ")");
+    }
+    
+    /**
+     * Log method exit with return value
+     */
+    public void exit(String methodName, Object returnValue) {
+        logger.fine(PREFIX + "EXIT: " + methodName + " -> " + returnValue);
+    }
+    
+    /**
+     * Log method exit without return value
+     */
+    public void exit(String methodName) {
+        logger.fine(PREFIX + "EXIT: " + methodName);
+    }
+    
+    /**
      * Get the underlying Bukkit logger (for cases where direct access is needed)
      */
     public Logger getBukkitLogger() {
