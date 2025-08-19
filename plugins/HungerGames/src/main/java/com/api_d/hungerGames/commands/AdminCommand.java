@@ -57,6 +57,8 @@ public class AdminCommand extends BaseCommand implements TabCompleter {
                 return handleForceFinal(sender, args);
             case "end":
                 return handleEnd(sender, args);
+            case "debug":
+                return handleDebug(sender, args);
             default:
                 showHelp(sender);
                 return true;
@@ -72,8 +74,16 @@ public class AdminCommand extends BaseCommand implements TabCompleter {
         GameManager gameManager = plugin.getGameManager();
         
         if (gameManager.isGameRunning()) {
-            sendMessage(sender, "§cA game is already running!");
-            return true;
+            GameState currentState = gameManager.getCurrentState();
+            if (currentState == GameState.WAITING) {
+                // Game is waiting, force start it
+                sendMessage(sender, "§aForce starting the game...");
+                gameManager.forceStartGame();
+                return true;
+            } else {
+                sendMessage(sender, "§cA game is already running in state: " + currentState.getDisplayName());
+                return true;
+            }
         }
         
         // Force start the game
@@ -344,6 +354,26 @@ public class AdminCommand extends BaseCommand implements TabCompleter {
     }
     
     /**
+     * Handle debug command
+     */
+    private boolean handleDebug(CommandSender sender, String[] args) {
+        if (!checkPermission(sender, "hungergames.admin.debug")) return true;
+        
+        GameManager gameManager = plugin.getGameManager();
+        
+        sendMessage(sender, "§6=== Hunger Games Debug Info ===");
+        sendMessage(sender, "§eGame running: §a" + gameManager.isGameRunning());
+        sendMessage(sender, "§eCurrent state: §a" + (gameManager.getCurrentState() != null ? gameManager.getCurrentState().getDisplayName() : "Unknown"));
+        sendMessage(sender, "§eAlive players: §a" + gameManager.getAlivePlayers().size());
+        sendMessage(sender, "§eDead players: §a" + gameManager.getDeadPlayers().size());
+        sendMessage(sender, "§ePvP enabled: §a" + gameManager.isPvpEnabled());
+        sendMessage(sender, "§eFeast spawned: §a" + gameManager.isFeastSpawned());
+        sendMessage(sender, "§eOnline players: §a" + Bukkit.getOnlinePlayers().size());
+        
+        return true;
+    }
+    
+    /**
      * Get the next logical game state
      */
     private GameState getNextState(GameState currentState) {
@@ -385,6 +415,7 @@ public class AdminCommand extends BaseCommand implements TabCompleter {
         sendMessage(sender, "§e/hgadmin forceborder §7- Force start border shrinking");
         sendMessage(sender, "§e/hgadmin forcefinal §7- Force start final fight");
         sendMessage(sender, "§e/hgadmin end §7- Force end the game");
+        sendMessage(sender, "§e/hgadmin debug §7- Show debug information about the game state");
         sendMessage(sender, "");
         sendMessage(sender, "§eAvailable states: WAITING, STARTING, ACTIVE, FEAST, BORDER_SHRINKING, FINAL_FIGHT, ENDING, FINISHED");
     }
@@ -398,7 +429,7 @@ public class AdminCommand extends BaseCommand implements TabCompleter {
             String partial = args[0].toLowerCase();
             List<String> subCommands = Arrays.asList(
                 "start", "next", "state", "cancel", "reload", "status",
-                "forcepvp", "forcefeast", "forceborder", "forcefinal", "end"
+                "forcepvp", "forcefeast", "forceborder", "forcefinal", "end", "debug"
             );
             
             for (String subCommand : subCommands) {

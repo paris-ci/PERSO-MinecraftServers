@@ -15,6 +15,10 @@ import org.bukkit.plugin.Plugin;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import org.bukkit.inventory.meta.ItemMeta;
+import net.kyori.adventure.text.Component;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Manages compass tracking for players
@@ -78,15 +82,25 @@ public class CompassTracker implements Listener {
      * Give a compass to a player
      */
     public void giveCompass(Player player) {
+        // Create compass item
         ItemStack compass = new ItemStack(Material.COMPASS);
         CompassMeta meta = (CompassMeta) compass.getItemMeta();
         
         if (meta != null) {
-            meta.displayName(net.kyori.adventure.text.Component.text("§6Tracking Compass"));
-            meta.lore(java.util.Arrays.asList(
-                net.kyori.adventure.text.Component.text("§7Right-click to change tracking mode"),
-                net.kyori.adventure.text.Component.text("§7Current: §a" + getTrackingModeName(TrackingMode.SPAWN))
-            ));
+            meta.displayName(Component.text("§6Hunger Games Compass"));
+            
+            // Create lore explaining the compass
+            List<Component> lore = Arrays.asList(
+                Component.text("§7Right-click to change tracking mode"),
+                Component.text(""),
+                Component.text("§eCurrent mode: §aSPAWN"),
+                Component.text("§7Modes: SPAWN, FEAST, PARTY, ENEMY")
+            );
+            meta.lore(lore);
+            
+            // Set initial lodestone to spawn
+            meta.setLodestone(spawnLocation);
+            meta.setLodestoneTracked(true);
             compass.setItemMeta(meta);
         }
         
@@ -96,8 +110,8 @@ public class CompassTracker implements Listener {
         // Update compass to point to spawn initially
         updateCompass(player, TrackingMode.SPAWN);
         
-        // Give the compass
-        player.getInventory().addItem(compass);
+        // Give the compass in the rightmost slot (slot 8)
+        player.getInventory().setItem(8, compass);
     }
     
     /**
@@ -107,12 +121,31 @@ public class CompassTracker implements Listener {
         Location targetLocation = getTargetLocation(player, mode);
         
         if (targetLocation != null) {
-            CompassMeta meta = (CompassMeta) player.getInventory().getItemInMainHand().getItemMeta();
-            if (meta != null && player.getInventory().getItemInMainHand().getType() == Material.COMPASS) {
-                meta.setLodestone(targetLocation);
-                meta.setLodestoneTracked(true);
-                player.getInventory().getItemInMainHand().setItemMeta(meta);
+            ItemStack mainHand = player.getInventory().getItemInMainHand();
+            if (mainHand.getType() == Material.COMPASS) {
+                ItemMeta meta = mainHand.getItemMeta();
+                if (meta instanceof CompassMeta) {
+                    CompassMeta compassMeta = (CompassMeta) meta;
+                    
+                    // Only update if the target location has changed significantly (more than 5 blocks)
+                    Location currentLodestone = compassMeta.getLodestone();
+                    if (currentLodestone == null || currentLodestone.distance(targetLocation) > 5.0) {
+                        compassMeta.setLodestone(targetLocation);
+                        compassMeta.setLodestoneTracked(true);
+                        mainHand.setItemMeta(compassMeta);
+                    }
+                }
             }
+        }
+    }
+    
+    /**
+     * Force update compass for a player (used when tracking mode changes)
+     */
+    public void forceUpdateCompass(Player player) {
+        TrackingMode currentMode = playerTrackingModes.get(player.getUniqueId());
+        if (currentMode != null) {
+            updateCompass(player, currentMode);
         }
     }
     

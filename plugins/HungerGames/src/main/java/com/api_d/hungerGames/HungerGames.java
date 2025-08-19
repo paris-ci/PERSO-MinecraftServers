@@ -263,7 +263,7 @@ public final class HungerGames extends JavaPlugin implements Listener {
             checkAndStartGame();
             
             // Set custom join message - using modern API
-            String joinMessage = config.getPrefix() + "§e" + event.getPlayer().getName() + " joined the Hunger Games!";
+            String joinMessage = config.getPrefix() + "&e" + event.getPlayer().getName() + " joined the Hunger Games!";
             event.joinMessage(LegacyComponentSerializer.legacySection().deserialize(joinMessage));
             
             // Update player flight and game mode through protection manager
@@ -298,7 +298,7 @@ public final class HungerGames extends JavaPlugin implements Listener {
             checkAndCancelGame();
             
             // Set custom quit message - using modern API
-            String quitMessage = config.getPrefix() + "§7" + event.getPlayer().getName() + " left the Hunger Games!";
+            String quitMessage = config.getPrefix() + "&7" + event.getPlayer().getName() + " left the Hunger Games!";
             event.quitMessage(LegacyComponentSerializer.legacySection().deserialize(quitMessage));
             
         } catch (Exception e) {

@@ -107,6 +107,10 @@ public class GameConfig {
         return config.getBoolean("protection.enable_flight_waiting", true);
     }
     
+    public boolean isSetSpectatorModeWhenWaiting() {
+        return config.getBoolean("protection.set_spectator_mode_waiting", true);
+    }
+    
     // Feast settings
     public boolean isFeastEnabled() {
         return config.getBoolean("feast.enabled", true);

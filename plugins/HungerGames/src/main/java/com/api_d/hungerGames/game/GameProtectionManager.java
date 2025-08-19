@@ -12,6 +12,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerToggleFlightEvent;
@@ -112,6 +113,12 @@ public class GameProtectionManager implements Listener {
      * Check if a player should have flight enabled
      */
     private boolean shouldPlayerFly(Player player) {
+        // If spectator mode is enabled, always allow flight for spectators
+        if (config.isSetSpectatorModeWhenWaiting() && player.getGameMode() == GameMode.SPECTATOR) {
+            return true;
+        }
+        
+        // Otherwise, use the old flight logic
         return config.isFlightEnabledWhenWaiting() && 
                (!gameManager.isGameRunning() || 
                 gameManager.getCurrentState() == null ||
@@ -143,7 +150,12 @@ public class GameProtectionManager implements Listener {
      */
     public void updateAllPlayersFlight() {
         for (Player player : plugin.getServer().getOnlinePlayers()) {
-            if (shouldPlayerFly(player)) {
+            if (config.isSetSpectatorModeWhenWaiting() && player.getGameMode() == GameMode.SPECTATOR) {
+                // Spectators should always have flight enabled
+                player.setAllowFlight(true);
+                player.setFlying(true);
+                playerFlightEnabled.put(player.getUniqueId(), true);
+            } else if (shouldPlayerFly(player)) {
                 enableFlight(player);
             } else {
                 disableFlight(player);
@@ -157,11 +169,17 @@ public class GameProtectionManager implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         
-        // Enable flight if game isn't started and flight is enabled in config
-        if (shouldPlayerFly(player)) {
-            enableFlight(player);
+        // Set player to spectator mode if game isn't started and spectator mode is enabled in config
+        if (config.isSetSpectatorModeWhenWaiting()) {
+            player.setGameMode(GameMode.SPECTATOR);
             
-            // Set player to creative mode if flight is enabled
+            // Enable flight for spectators
+            player.setAllowFlight(true);
+            player.setFlying(true);
+            playerFlightEnabled.put(player.getUniqueId(), true);
+        } else if (shouldPlayerFly(player)) {
+            // Fallback to old behavior if spectator mode is disabled
+            enableFlight(player);
             player.setGameMode(GameMode.CREATIVE);
         }
     }
@@ -208,7 +226,26 @@ public class GameProtectionManager implements Listener {
             // Prevent mobs from targeting players
             if (event.getTarget() instanceof Player) {
                 event.setCancelled(true);
+                event.setTarget(null);
             }
+        }
+    }
+    
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
+        if (shouldBlockInteraction()) {
+            Player player = event.getPlayer();
+            
+            // Allow compass interaction (for kit selection)
+            if (player.getInventory().getItemInMainHand().getType().name().contains("COMPASS")) {
+                return;
+            }
+            
+            // Block all other entity interactions
+            event.setCancelled(true);
+            
+            // Send message to player
+            player.sendMessage("§cYou cannot interact with entities while the game hasn't started!");
         }
     }
     
@@ -216,8 +253,13 @@ public class GameProtectionManager implements Listener {
     public void onPlayerToggleFlight(PlayerToggleFlightEvent event) {
         Player player = event.getPlayer();
         
+        // Allow spectators to toggle flight freely
+        if (player.getGameMode() == GameMode.SPECTATOR) {
+            return;
+        }
+        
         if (shouldPlayerFly(player)) {
-            // Force flight on if player tries to turn it off
+            // Force flight on if player tries to turn it off (only for non-spectators)
             if (!event.isFlying()) {
                 event.setCancelled(true);
                 player.setFlying(true);

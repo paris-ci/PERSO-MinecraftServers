@@ -7,6 +7,7 @@ import com.api_d.hungerGames.util.HGLogger;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Objects;
 
 /**
  * Manages game state transitions and validates state changes
@@ -19,6 +20,9 @@ public class GameStateMachine {
     
     // Define valid state transitions
     private static final Set<StateTransition> VALID_TRANSITIONS = new HashSet<>(Arrays.asList(
+        // From initial state (null)
+        new StateTransition(null, GameState.WAITING),
+        
         // From WAITING
         new StateTransition(GameState.WAITING, GameState.STARTING),
         new StateTransition(GameState.WAITING, GameState.FINISHED), // Server shutdown
@@ -56,10 +60,10 @@ public class GameStateMachine {
     public GameStateMachine(boolean logStateChanges) {
         this.logger = new HGLogger(java.util.logging.Logger.getLogger("HungerGames"));
         this.logStateChanges = logStateChanges;
-        this.currentState = GameState.WAITING;
+        this.currentState = null; // Start with no game state
         
         if (logStateChanges) {
-            logger.info("Game state machine initialized in state: " + currentState.getDisplayName());
+            logger.info("Game state machine initialized in initial state (no game running)");
         }
     }
     
@@ -113,7 +117,9 @@ public class GameStateMachine {
         
         // Log the transition
         if (logStateChanges) {
-            String message = "Game state changed: " + previousState.getDisplayName() + " -> " + newState.getDisplayName();
+            String message = "Game state changed: " + 
+                (previousState != null ? previousState.getDisplayName() : "null") + 
+                " -> " + newState.getDisplayName();
             if (reason != null) {
                 message += " (" + reason + ")";
             }
@@ -180,12 +186,12 @@ public class GameStateMachine {
             if (this == obj) return true;
             if (obj == null || getClass() != obj.getClass()) return false;
             StateTransition that = (StateTransition) obj;
-            return from == that.from && to == that.to;
+            return Objects.equals(from, that.from) && Objects.equals(to, that.to);
         }
         
         @Override
         public int hashCode() {
-            return from.hashCode() * 31 + to.hashCode();
+            return Objects.hash(from, to);
         }
         
         @Override

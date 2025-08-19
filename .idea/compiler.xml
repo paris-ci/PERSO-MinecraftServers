@@ -7,4 +7,11 @@
       <module name="untitled.test" target="23" />
     </bytecodeTargetLevel>
   </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="HungerGames" options="-Xlint:all -Xlint:-processing -Xlint:-serial -Xlint:unchecked -Xlint:cast -Xlint:deprecation -Xlint:divzero -Xlint:empty -Xlint:fallthrough -Xlint:finally -Xlint:overrides -Xlint:path -Xlint:rawtypes -Xlint:static -Xlint:try" />
+      <module name="HungerGames.main" options="-Xlint:all -Xlint:-processing -Xlint:-serial -Xlint:unchecked -Xlint:cast -Xlint:deprecation -Xlint:divzero -Xlint:empty -Xlint:fallthrough -Xlint:finally -Xlint:overrides -Xlint:path -Xlint:rawtypes -Xlint:static -Xlint:try" />
+      <module name="HungerGames.test" options="-Xlint:all -Xlint:-processing -Xlint:-serial -Xlint:unchecked -Xlint:cast -Xlint:deprecation -Xlint:divzero -Xlint:empty -Xlint:fallthrough -Xlint:finally -Xlint:overrides -Xlint:path -Xlint:rawtypes -Xlint:static -Xlint:try" />
+    </option>
+  </component>
 </project>

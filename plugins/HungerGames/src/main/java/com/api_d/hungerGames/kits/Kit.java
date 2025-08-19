@@ -93,7 +93,12 @@ public abstract class Kit {
         List<ItemStack> items = getStartingItems();
         for (ItemStack item : items) {
             if (item != null) {
-                player.getInventory().addItem(item);
+                // Check if this is armor and equip it automatically
+                if (isArmor(item.getType())) {
+                    equipArmor(player, item);
+                } else {
+                    player.getInventory().addItem(item);
+                }
             }
         }
         
@@ -107,6 +112,33 @@ public abstract class Kit {
         
         // Apply kit-specific modifications
         applySpecialEffects(player);
+    }
+    
+    /**
+     * Check if an item is armor
+     */
+    private boolean isArmor(Material material) {
+        String name = material.name();
+        return name.endsWith("_HELMET") || name.endsWith("_CHESTPLATE") || 
+               name.endsWith("_LEGGINGS") || name.endsWith("_BOOTS");
+    }
+    
+    /**
+     * Equip armor in the correct slot
+     */
+    private void equipArmor(Player player, ItemStack armor) {
+        Material material = armor.getType();
+        String name = material.name();
+        
+        if (name.endsWith("_HELMET")) {
+            player.getInventory().setHelmet(armor);
+        } else if (name.endsWith("_CHESTPLATE")) {
+            player.getInventory().setChestplate(armor);
+        } else if (name.endsWith("_LEGGINGS")) {
+            player.getInventory().setLeggings(armor);
+        } else if (name.endsWith("_BOOTS")) {
+            player.getInventory().setBoots(armor);
+        }
     }
     
     /**

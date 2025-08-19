@@ -53,6 +53,7 @@ permissions:
       hungergames.admin.forceborder: true
       hungergames.admin.forcefinal: true
       hungergames.admin.end: true
+      hungergames.admin.debug: true
   
   hungergames.credits:
     description: View your own credits
@@ -140,4 +141,8 @@ permissions:
   
   hungergames.admin.end:
     description: Force end the game
+    default: op
+  
+  hungergames.admin.debug:
+    description: Show debug information about the game state
     default: op

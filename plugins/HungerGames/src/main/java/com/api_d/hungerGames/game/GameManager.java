@@ -28,6 +28,7 @@ import java.sql.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
+import com.api_d.hungerGames.kits.Kit;
 
 /**
  * Main game manager that coordinates the entire Hunger Games flow
@@ -128,6 +129,8 @@ public class GameManager implements Listener {
         // Prevent starting multiple games
         if (currentGame != null || stateMachine.getCurrentState() != null) {
             logger.warning("Game is already running. Cannot initialize new game.");
+            logger.warning("Current game: " + (currentGame != null ? "ID=" + currentGame.getId() : "null"));
+            logger.warning("Current state: " + (stateMachine.getCurrentState() != null ? stateMachine.getCurrentState().getDisplayName() : "null"));
             return;
         }
         
@@ -219,6 +222,7 @@ public class GameManager implements Listener {
         // Schedule game start if we have enough players or time runs out
         gameStartTask = new BukkitRunnable() {
             int timeLeft = config.getMaxWaitTime();
+            int lastLogTime = timeLeft; // Track when we last logged the message
             
             @Override
             public void run() {
@@ -244,6 +248,12 @@ public class GameManager implements Listener {
                         this.cancel();
                         return;
                     }
+                }
+                
+                // Only log "not enough players" every 30 seconds to reduce spam
+                if (onlinePlayers < 2 && (timeLeft % 30 == 0) && timeLeft != lastLogTime) {
+                    logger.info("Not enough players to start game. Need at least 2, have " + onlinePlayers);
+                    lastLogTime = timeLeft;
                 }
                 
                 if (timeLeft % 30 == 0 || timeLeft <= 10) {
@@ -287,6 +297,39 @@ public class GameManager implements Listener {
         
         return Bukkit.getOnlinePlayers().stream()
             .allMatch(kitManager::hasPlayerSelectedKit);
+    }
+    
+    /**
+     * Force start the game (admin command)
+     */
+    public void forceStartGame() {
+        if (stateMachine.getCurrentState() != GameState.WAITING) {
+            logger.warning("Cannot force start game: not in WAITING state");
+            return;
+        }
+        
+        logger.info("Admin force starting the game");
+        
+        // Cancel the waiting task
+        if (gameStartTask != null) {
+            gameStartTask.cancel();
+        }
+        
+        // Force start the game by directly calling the setup methods
+        int onlinePlayers = Bukkit.getOnlinePlayers().size();
+        logger.info("Force starting Hunger Games with " + onlinePlayers + " players");
+        
+        // Update game record
+        updateGameStartTime();
+        
+        // Set up players
+        setupPlayersForGame();
+        
+        // Award starting credits
+        awardStartingCredits();
+        
+        // Start countdown
+        startCountdown();
     }
     
     /**
@@ -352,6 +395,20 @@ public class GameManager implements Listener {
         gameStartTime = System.currentTimeMillis();
         
         for (Player player : Bukkit.getOnlinePlayers()) {
+            // Clear inventory completely
+            player.getInventory().clear();
+            player.getInventory().setArmorContents(null);
+            
+            // Reset player health and hunger
+            player.setHealth(20.0);
+            player.setFoodLevel(20);
+            player.setSaturation(5.0f);
+            
+            // Remove all potion effects
+            for (PotionEffect effect : player.getActivePotionEffects()) {
+                player.removePotionEffect(effect.getType());
+            }
+            
             // Add to alive players
             alivePlayers.add(player.getUniqueId());
             
@@ -364,7 +421,7 @@ public class GameManager implements Listener {
             // Teleport to spawn platform
             teleportToSpawn(player);
             
-            // Apply kit
+            // Apply kit (this will give them their starting items and effects)
             kitManager.applyKitToPlayer(player);
             
             // Set game mode and effects
@@ -376,6 +433,8 @@ public class GameManager implements Listener {
             // Save kit selection to database
             String kitId = kitManager.getPlayerKit(player).getId();
             playerManager.setPlayerLastKit(player.getUniqueId(), kitId);
+            
+            logger.info("Set up player " + player.getName() + " with kit " + kitId);
         }
         
         logger.info("Set up " + alivePlayers.size() + " players for the game");
@@ -490,11 +549,13 @@ public class GameManager implements Listener {
      * Start the active game phase
      */
     private void startActivePhase() {
-        if (!stateMachine.transitionTo(GameState.ACTIVE, "Countdown finished")) {
+        // First transition to STARTING state
+        if (!stateMachine.transitionTo(GameState.STARTING, "Countdown finished")) {
+            logger.warning("Failed to transition to STARTING state");
             return;
         }
         
-        logger.info("Game is now active!");
+        logger.info("Game is now starting!");
         
         // Remove movement restrictions
         for (Player player : Bukkit.getOnlinePlayers()) {
@@ -504,9 +565,20 @@ public class GameManager implements Listener {
             
             // Give compass with tracking system
             compassTracker.giveCompass(player);
+            
+            // Display player info
+            displayPlayerInfo(player);
         }
         
         broadcastMessage("§aThe Hunger Games have begun! Good luck!");
+        
+        // Now transition to ACTIVE state
+        if (!stateMachine.transitionTo(GameState.ACTIVE, "Players released")) {
+            logger.warning("Failed to transition to ACTIVE state");
+            return;
+        }
+        
+        logger.info("Game is now active!");
         
         // Schedule PvP enable
         schedulePvpEnable();
@@ -516,6 +588,50 @@ public class GameManager implements Listener {
         
         // Start survival credit task
         startSurvivalCredits();
+    }
+    
+    /**
+     * Display player information and kit details
+     */
+    private void displayPlayerInfo(Player player) {
+        Kit kit = kitManager.getPlayerKit(player);
+        String kitName = kit != null ? kit.getId() : "Unknown";
+        
+        // Send personal message
+        player.sendMessage("§6=== Your Hunger Games Stats ===");
+        player.sendMessage("§eKit: §a" + kitName);
+        player.sendMessage("§eHealth: §a" + (int)player.getHealth() + "§7/§a20");
+        player.sendMessage("§eHunger: §a" + player.getFoodLevel() + "§7/§a20");
+        player.sendMessage("§eArmor: §a" + getArmorDescription(player));
+        player.sendMessage("§eInventory: §a" + getInventoryDescription(player));
+        player.sendMessage("§6===============================");
+    }
+    
+    /**
+     * Get a description of the player's armor
+     */
+    private String getArmorDescription(Player player) {
+        ItemStack[] armor = player.getInventory().getArmorContents();
+        int armorPieces = 0;
+        for (ItemStack piece : armor) {
+            if (piece != null && piece.getType() != Material.AIR) {
+                armorPieces++;
+            }
+        }
+        return armorPieces + " pieces equipped";
+    }
+    
+    /**
+     * Get a description of the player's inventory
+     */
+    private String getInventoryDescription(Player player) {
+        int items = 0;
+        for (ItemStack item : player.getInventory().getContents()) {
+            if (item != null && item.getType() != Material.AIR) {
+                items++;
+            }
+        }
+        return items + " items";
     }
     
     /**
@@ -839,12 +955,26 @@ public class GameManager implements Listener {
     public void onGameStateChange(GameStateChangeEvent event) {
         logger.info("Game state changed: " + event.getPreviousState() + " -> " + event.getNewState());
         
-        // Update protection features based on game state
-        if (event.getNewState().isGameActive()) {
+        // Handle specific state transitions
+        if (event.getNewState() == GameState.STARTING) {
+            // Game is starting, ensure all players are in survival mode
+            logger.info("Game starting - transitioning players to survival mode");
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                player.setGameMode(GameMode.SURVIVAL);
+                // Disable flight for all players when game starts
+                player.setAllowFlight(false);
+                player.setFlying(false);
+            }
+        } else if (event.getNewState().isGameActive()) {
             // Game is now active, disable protection features
+            logger.info("Game is now active - disabling protection features");
+            protectionManager.updateAllPlayersFlight();
+        } else if (event.getNewState() == GameState.WAITING) {
+            // Game is waiting, enable protection features
+            logger.info("Game is waiting - enabling protection features");
             protectionManager.updateAllPlayersFlight();
         } else {
-            // Game is not active, enable protection features
+            // For other states, update protection as needed
             protectionManager.updateAllPlayersFlight();
         }
     }
@@ -929,6 +1059,22 @@ public class GameManager implements Listener {
      */
     public GameProtectionManager getProtectionManager() {
         return protectionManager;
+    }
+    
+    /**
+     * Debug method to show current game state
+     */
+    public String getDebugInfo() {
+        StringBuilder info = new StringBuilder();
+        info.append("Game Manager Debug Info:\n");
+        info.append("- Current Game: ").append(currentGame != null ? "ID=" + currentGame.getId() : "null").append("\n");
+        info.append("- Current State: ").append(stateMachine.getCurrentState() != null ? stateMachine.getCurrentState().getDisplayName() : "null").append("\n");
+        info.append("- Alive Players: ").append(alivePlayers.size()).append("\n");
+        info.append("- Dead Players: ").append(deadPlayers.size()).append("\n");
+        info.append("- PvP Enabled: ").append(pvpEnabled).append("\n");
+        info.append("- Feast Spawned: ").append(feastSpawned).append("\n");
+        info.append("- Online Players: ").append(Bukkit.getOnlinePlayers().size()).append("\n");
+        return info.toString();
     }
     
     // Admin force methods
