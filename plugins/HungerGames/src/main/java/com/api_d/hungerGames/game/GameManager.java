@@ -1,5 +1,6 @@
 package com.api_d.hungerGames.game;
 
+import com.api_d.hungerGames.HungerGames;
 import com.api_d.hungerGames.config.GameConfig;
 import com.api_d.hungerGames.database.DatabaseManager;
 import com.api_d.hungerGames.database.models.Game;
@@ -83,12 +84,27 @@ public class GameManager implements Listener {
         
         // Initialize game managers
         this.platformGenerator = new PlatformGenerator(config, plugin.getLogger());
-        this.compassTracker = new CompassTracker(plugin, playerParties);
+        this.compassTracker = CompassTracker.create(plugin, playerParties);
         this.feastManager = new FeastManager(plugin, config, platformGenerator);
         this.borderManager = new BorderManager(plugin, config);
         this.finalFightManager = new FinalFightManager(plugin, alivePlayers);
-        this.spectatorManager = new SpectatorManager(plugin, config, kitManager);
-        
+        this.spectatorManager = new SpectatorManager((HungerGames) plugin, config, kitManager);
+    }
+    
+    /**
+     * Create and initialize a new GameManager
+     */
+    public static GameManager create(Plugin plugin, GameConfig config, DatabaseManager databaseManager, 
+                                   PlayerManager playerManager, KitManager kitManager) {
+        GameManager manager = new GameManager(plugin, config, databaseManager, playerManager, kitManager);
+        manager.initializeEventListeners();
+        return manager;
+    }
+    
+    /**
+     * Initialize event listeners after construction
+     */
+    private void initializeEventListeners() {
         // Register event listeners
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
@@ -863,5 +879,26 @@ public class GameManager implements Listener {
     
     public Game getCurrentGame() {
         return currentGame;
+    }
+    
+    /**
+     * Get the platform generator
+     */
+    public PlatformGenerator getPlatformGenerator() {
+        return platformGenerator;
+    }
+    
+    /**
+     * Get the compass tracker
+     */
+    public CompassTracker getCompassTracker() {
+        return compassTracker;
+    }
+    
+    /**
+     * Get the spectator manager
+     */
+    public SpectatorManager getSpectatorManager() {
+        return spectatorManager;
     }
 }

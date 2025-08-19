@@ -11,10 +11,29 @@ import java.util.*;
  */
 public class KitManager {
     
-    private final Map<String, Kit> kits = new HashMap<>();
-    private final Map<UUID, String> playerKitSelection = new HashMap<>();
+    private Map<String, Kit> kits;
+    private Map<UUID, String> playerKitSelection;
     
     public KitManager() {
+        // Initialize collections first
+        kits = new HashMap<>();
+        playerKitSelection = new HashMap<>();
+    }
+    
+    /**
+     * Create and initialize a new KitManager
+     */
+    public static KitManager create() {
+        KitManager manager = new KitManager();
+        manager.registerDefaultKits();
+        manager.registerPremiumKits();
+        return manager;
+    }
+    
+    /**
+     * Initialize all kits after construction
+     */
+    private void initializeKits() {
         registerDefaultKits();
         registerPremiumKits();
     }

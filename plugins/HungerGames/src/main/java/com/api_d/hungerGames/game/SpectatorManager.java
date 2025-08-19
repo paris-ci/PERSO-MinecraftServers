@@ -1,15 +1,19 @@
 package com.api_d.hungerGames.game;
 
+import com.api_d.hungerGames.HungerGames;
 import com.api_d.hungerGames.config.GameConfig;
+import com.api_d.hungerGames.kits.Kit;
 import com.api_d.hungerGames.kits.KitManager;
 import com.api_d.hungerGames.util.HGLogger;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.plugin.Plugin;
-
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -18,14 +22,14 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class SpectatorManager {
     
-    private final Plugin plugin;
+    private final HungerGames plugin;
     private final GameConfig config;
     private final KitManager kitManager;
     private final HGLogger logger;
     
     private final ConcurrentHashMap<UUID, Player> spectators = new ConcurrentHashMap<>();
     
-    public SpectatorManager(Plugin plugin, GameConfig config, KitManager kitManager) {
+    public SpectatorManager(HungerGames plugin, GameConfig config, KitManager kitManager) {
         this.plugin = plugin;
         this.config = config;
         this.kitManager = kitManager;
@@ -154,10 +158,30 @@ public class SpectatorManager {
      * Handle kit menu access for spectators
      */
     public void openKitMenu(Player player) {
-        // This would integrate with the existing kit system
-        // For now, just send a message
-        player.sendMessage("§aKit menu functionality will be implemented here");
-        // TODO: Integrate with KitManager to show kit selection GUI
+        // Create kit selection GUI
+        Inventory kitMenu = Bukkit.createInventory(null, 54, net.kyori.adventure.text.Component.text("§6Kit Selection"));
+        
+        // Get all available kits
+        Collection<Kit> allKits = kitManager.getAllKits();
+        int slot = 0;
+        
+        for (Kit kit : allKits) {
+            if (slot >= 54) break; // Prevent overflow
+            
+            // Check if player can afford the kit
+            int playerCredits = plugin.getPlayerManager().getCachedPlayer(player.getUniqueId()).getCredits();
+            boolean canAfford = kit.canPlayerUse(player, playerCredits);
+            
+            // Create display item for the kit
+            ItemStack displayItem = kit.createDisplayItem(canAfford);
+            
+            // Add click handler
+            kitMenu.setItem(slot, displayItem);
+            slot++;
+        }
+        
+        // Open the menu
+        player.openInventory(kitMenu);
     }
     
     /**
@@ -165,11 +189,27 @@ public class SpectatorManager {
      */
     public void activateAfterDeathEffect(Player player) {
         // Get player's last used kit
-        String lastKitId = kitManager.getPlayerKit(player).getId();
+        Kit lastKit = kitManager.getPlayerKit(player);
         
-        // This would integrate with the kit system to activate after-death effects
-        player.sendMessage("§aAfter-death effects for " + lastKitId + " will be implemented here");
-        // TODO: Integrate with KitManager to activate kit-specific after-death effects
+        if (lastKit == null) {
+            player.sendMessage("§cNo kit found for after-death effects");
+            return;
+        }
+        
+        // Get available after-death effects for the kit
+        List<Kit.AfterDeathEffect> effects = lastKit.getAfterDeathEffects();
+        
+        if (effects.isEmpty()) {
+            player.sendMessage("§7No after-death effects available for " + lastKit.getDisplayName());
+            return;
+        }
+        
+        // For now, just execute the first available effect
+        // In the future, this could show a selection menu
+        Kit.AfterDeathEffect effect = effects.get(0);
+        effect.execute(player);
+        
+        player.sendMessage("§aActivated " + effect.getName() + " effect!");
     }
     
     /**

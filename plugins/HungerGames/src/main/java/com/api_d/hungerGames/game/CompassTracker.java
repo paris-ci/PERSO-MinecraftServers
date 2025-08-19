@@ -40,7 +40,21 @@ public class CompassTracker implements Listener {
     public CompassTracker(Plugin plugin, Map<UUID, GameParty> playerParties) {
         this.plugin = plugin;
         this.playerParties = playerParties;
-        
+    }
+    
+    /**
+     * Create and initialize a new CompassTracker
+     */
+    public static CompassTracker create(Plugin plugin, Map<UUID, GameParty> playerParties) {
+        CompassTracker tracker = new CompassTracker(plugin, playerParties);
+        tracker.initializeEventListeners();
+        return tracker;
+    }
+    
+    /**
+     * Initialize event listeners after construction
+     */
+    private void initializeEventListeners() {
         // Register event listeners
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
@@ -280,5 +294,26 @@ public class CompassTracker implements Listener {
      */
     public void removePlayer(UUID playerId) {
         playerTrackingModes.remove(playerId);
+    }
+
+    /**
+     * Change the tracking mode for a player
+     */
+    public boolean changeTrackingMode(Player player, String modeString) {
+        try {
+            TrackingMode mode = TrackingMode.valueOf(modeString.toUpperCase());
+            playerTrackingModes.put(player.getUniqueId(), mode);
+            updateCompass(player, mode);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false; // Invalid mode
+        }
+    }
+    
+    /**
+     * Get the current tracking mode for a player
+     */
+    public TrackingMode getTrackingMode(Player player) {
+        return playerTrackingModes.getOrDefault(player.getUniqueId(), TrackingMode.SPAWN);
     }
 }

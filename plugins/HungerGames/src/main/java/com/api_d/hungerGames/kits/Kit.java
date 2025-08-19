@@ -7,6 +7,7 @@ import org.bukkit.potion.PotionEffect;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.bukkit.inventory.meta.ItemMeta;
 
 /**
  * Abstract base class for all kits in the Hunger Games
@@ -144,7 +145,43 @@ public abstract class Kit {
      */
     public ItemStack createDisplayItem(boolean canAfford) {
         ItemStack item = new ItemStack(icon);
-        // TODO: Add metadata, lore, etc.
+        ItemMeta meta = item.getItemMeta();
+        
+        if (meta != null) {
+            // Set display name with color coding
+            String color = canAfford ? "§a" : "§c";
+            meta.displayName(net.kyori.adventure.text.Component.text(color + displayName));
+            
+            // Create lore with kit information
+            List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
+            lore.add(net.kyori.adventure.text.Component.text("§7" + description));
+            lore.add(net.kyori.adventure.text.Component.text(""));
+            
+            if (isPremium) {
+                lore.add(net.kyori.adventure.text.Component.text("§6Premium Kit"));
+                lore.add(net.kyori.adventure.text.Component.text("§7Cost: §e" + cost + " credits"));
+                if (!canAfford) {
+                    lore.add(net.kyori.adventure.text.Component.text("§cInsufficient credits"));
+                }
+            } else {
+                lore.add(net.kyori.adventure.text.Component.text("§aFree Kit"));
+            }
+            
+            lore.add(net.kyori.adventure.text.Component.text(""));
+            lore.add(net.kyori.adventure.text.Component.text("§7Starting Items:"));
+            for (ItemStack startingItem : getStartingItems()) {
+                if (startingItem != null && startingItem.getItemMeta() != null) {
+                    String itemName = startingItem.getItemMeta().displayName() != null ? 
+                        startingItem.getItemMeta().displayName().toString() : 
+                        startingItem.getType().name().toLowerCase().replace("_", " ");
+                    lore.add(net.kyori.adventure.text.Component.text("§8- §7" + itemName));
+                }
+            }
+            
+            meta.lore(lore);
+            item.setItemMeta(meta);
+        }
+        
         return item;
     }
     

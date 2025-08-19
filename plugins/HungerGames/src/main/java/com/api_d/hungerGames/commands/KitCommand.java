@@ -118,7 +118,6 @@ public class KitCommand extends BaseCommand {
         sendMessage(player, "&6Premium Kits:");
         for (Kit kit : plugin.getKitManager().getPremiumKits()) {
             boolean canAfford = kit.canPlayerUse(player, playerCredits);
-            NamedTextColor color = canAfford ? NamedTextColor.GREEN : NamedTextColor.RED;
             
             sendMessage(player, "  " + "&" + (canAfford ? "a" : "c") + kit.getId() + " &7(" + kit.getCost() + " credits) - " + kit.getDescription());
         }

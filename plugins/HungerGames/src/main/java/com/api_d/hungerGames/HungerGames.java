@@ -2,6 +2,8 @@ package com.api_d.hungerGames;
 
 import com.api_d.hungerGames.commands.CreditsCommand;
 import com.api_d.hungerGames.commands.KitCommand;
+import com.api_d.hungerGames.commands.CompassCommand;
+import com.api_d.hungerGames.commands.SpectateCommand;
 import com.api_d.hungerGames.config.GameConfig;
 import com.api_d.hungerGames.database.DatabaseManager;
 import com.api_d.hungerGames.game.GameManager;
@@ -110,13 +112,13 @@ public final class HungerGames extends JavaPlugin implements Listener {
         playerManager = new PlayerManager(databaseManager, hgLogger.getBukkitLogger());
         
         // Initialize kit manager
-        kitManager = new KitManager();
+        kitManager = KitManager.create();
         
         // Initialize platform generator
         platformGenerator = new PlatformGenerator(config, hgLogger.getBukkitLogger());
         
         // Initialize game manager
-        gameManager = new GameManager(this, config, databaseManager, playerManager, kitManager);
+        gameManager = GameManager.create(this, config, databaseManager, playerManager, kitManager);
         
         hgLogger.info("All managers initialized");
     }
@@ -144,6 +146,8 @@ public final class HungerGames extends JavaPlugin implements Listener {
         // Register commands
         getCommand("credits").setExecutor(new CreditsCommand(this));
         getCommand("kit").setExecutor(new KitCommand(this));
+        getCommand("compass").setExecutor(new CompassCommand(this));
+        getCommand("spectate").setExecutor(new SpectateCommand(this));
         
         hgLogger.info("Commands registered");
     }
