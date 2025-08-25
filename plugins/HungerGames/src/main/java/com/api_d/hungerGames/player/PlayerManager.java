@@ -19,6 +19,7 @@ public class PlayerManager {
     private final DatabaseManager databaseManager;
     private final HGLogger logger;
     private final Map<UUID, Player> playerCache = new HashMap<>();
+    private final Map<UUID, java.util.Set<String>> unlockedKitsCache = new HashMap<>();
     
     public PlayerManager(DatabaseManager databaseManager, java.util.logging.Logger logger) {
         this.databaseManager = databaseManager;
@@ -53,6 +54,13 @@ public class PlayerManager {
                 
                 // Cache the player
                 playerCache.put(uuid, player);
+                // Preload unlocked kits for this player
+                try {
+                    unlockedKitsCache.put(uuid, loadUnlockedKitsFromDatabase(player.getId()));
+                } catch (SQLException e) {
+                    logger.log(Level.WARNING, "Failed to load unlocked kits for player: " + uuid, e);
+                    unlockedKitsCache.put(uuid, new java.util.HashSet<>());
+                }
                 return player;
                 
             } catch (SQLException e) {
@@ -114,6 +122,8 @@ public class PlayerManager {
                 );
                 
                 logger.info("Created new player record for UUID: " + uuid);
+                // Initialize unlocked kits cache for new player
+                unlockedKitsCache.put(uuid, new java.util.HashSet<>());
                 return player;
             }
             
@@ -270,6 +280,7 @@ public class PlayerManager {
                 savePlayer(player).join();
                 logger.info("Unloaded player from cache: " + uuid);
             }
+            unlockedKitsCache.remove(uuid);
         });
     }
     
@@ -297,6 +308,7 @@ public class PlayerManager {
      */
     public void clearCache() {
         playerCache.clear();
+        unlockedKitsCache.clear();
     }
     
     /**
@@ -312,5 +324,63 @@ public class PlayerManager {
         stats.put("total_credits", totalCredits);
         
         return stats;
+    }
+
+    /**
+     * Load unlocked kits from database for a given player id
+     */
+    private java.util.Set<String> loadUnlockedKitsFromDatabase(int playerId) throws SQLException {
+        java.util.Set<String> unlocked = new java.util.HashSet<>();
+        String query = "SELECT kit_id FROM player_unlocked_kits WHERE player_id = ?";
+        try (Connection connection = databaseManager.getConnection();
+             PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setInt(1, playerId);
+            ResultSet rs = statement.executeQuery();
+            while (rs.next()) {
+                unlocked.add(rs.getString("kit_id"));
+            }
+        }
+        return unlocked;
+    }
+
+    /**
+     * Check if a player has permanently unlocked a kit
+     */
+    public boolean hasUnlockedKit(UUID uuid, String kitId) {
+        java.util.Set<String> set = unlockedKitsCache.get(uuid);
+        return set != null && set.contains(kitId);
+    }
+
+    /**
+     * Unlock a kit permanently for the player
+     */
+    public CompletableFuture<Void> unlockKit(UUID uuid, String kitId) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                Player player = playerCache.get(uuid);
+                if (player == null) {
+                    logger.warning("Attempted to unlock kit for non-loaded player: " + uuid);
+                    return;
+                }
+                String sql = "INSERT INTO player_unlocked_kits (player_id, kit_id) VALUES (?, ?) ON CONFLICT DO NOTHING";
+                try (Connection connection = databaseManager.getConnection();
+                     PreparedStatement statement = connection.prepareStatement(sql)) {
+                    statement.setInt(1, player.getId());
+                    statement.setString(2, kitId);
+                    statement.executeUpdate();
+                }
+                unlockedKitsCache.computeIfAbsent(uuid, k -> new java.util.HashSet<>()).add(kitId);
+                logger.info("Unlocked kit '" + kitId + "' for player " + uuid);
+            } catch (SQLException e) {
+                logger.log(Level.SEVERE, "Failed to unlock kit for player: " + uuid + ", kit: " + kitId, e);
+            }
+        });
+    }
+
+    /**
+     * Get the set of unlocked kit ids for a player
+     */
+    public java.util.Set<String> getUnlockedKits(UUID uuid) {
+        return new java.util.HashSet<>(unlockedKitsCache.getOrDefault(uuid, java.util.Collections.emptySet()));
     }
 }

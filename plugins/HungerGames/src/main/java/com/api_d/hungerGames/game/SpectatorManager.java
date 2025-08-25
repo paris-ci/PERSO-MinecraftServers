@@ -45,6 +45,9 @@ public class SpectatorManager {
         
         // Set game mode
         player.setGameMode(org.bukkit.GameMode.SPECTATOR);
+        // Ensure flight is enabled for spectators
+        player.setAllowFlight(true);
+        player.setFlying(true);
         
         // Clear inventory
         player.getInventory().clear();

@@ -101,9 +101,9 @@ public class CompassTracker implements Listener {
             );
             meta.lore(lore);
             
-            // Set initial lodestone to spawn
+            // Set initial lodestone to spawn and do not require a real Lodestone block
             meta.setLodestone(spawnLocation);
-            meta.setLodestoneTracked(true);
+            meta.setLodestoneTracked(false);
             compass.setItemMeta(meta);
         }
         
@@ -143,7 +143,9 @@ public class CompassTracker implements Listener {
                     if (meta instanceof CompassMeta) {
                         CompassMeta compassMeta = (CompassMeta) meta;
                         compassMeta.setLodestone(targetLocation);
-                        compassMeta.setLodestoneTracked(true);
+                        compassMeta.setLodestoneTracked(false);
+                        // Update lore including debug coordinates if permitted
+                        compassMeta.lore(buildCompassLore(player, mode, targetLocation));
                         mainHand.setItemMeta(compassMeta);
                         player.updateInventory();
                     }
@@ -156,7 +158,8 @@ public class CompassTracker implements Listener {
                     if (meta instanceof CompassMeta) {
                         CompassMeta compassMeta = (CompassMeta) meta;
                         compassMeta.setLodestone(targetLocation);
-                        compassMeta.setLodestoneTracked(true);
+                        compassMeta.setLodestoneTracked(false);
+                        compassMeta.lore(buildCompassLore(player, mode, targetLocation));
                         inventoryCompass.setItemMeta(compassMeta);
                     }
                 }
@@ -301,13 +304,11 @@ public class CompassTracker implements Listener {
         // Update compass
         updateCompass(player, newMode);
         
-        // Update lore
+        // Update lore (include debug coordinates if permitted)
         CompassMeta meta = (CompassMeta) item.getItemMeta();
         if (meta != null) {
-            meta.lore(java.util.Arrays.asList(
-                net.kyori.adventure.text.Component.text("§7Right-click to change tracking mode"),
-                net.kyori.adventure.text.Component.text("§7Current: §a" + getTrackingModeName(newMode))
-            ));
+            Location target = getTargetLocation(player, newMode);
+            meta.lore(buildCompassLore(player, newMode, target));
             item.setItemMeta(meta);
         }
         
@@ -315,6 +316,21 @@ public class CompassTracker implements Listener {
         player.sendMessage("§6Compass now tracking: §a" + getTrackingModeName(newMode));
         
         event.setCancelled(true);
+    }
+
+    /**
+     * Build compass lore lines, including coordinates for players with debug permission
+     */
+    private java.util.List<Component> buildCompassLore(Player player, TrackingMode mode, Location targetLocation) {
+        java.util.List<Component> lines = new java.util.ArrayList<>();
+        lines.add(net.kyori.adventure.text.Component.text("§7Right-click to change tracking mode"));
+        lines.add(net.kyori.adventure.text.Component.text("§7Current: §a" + getTrackingModeName(mode)));
+        if (player.hasPermission("hungergames.debug.compass") && targetLocation != null) {
+            int x = targetLocation.getBlockX();
+            int z = targetLocation.getBlockZ();
+            lines.add(net.kyori.adventure.text.Component.text("§8[DEBUG] §7Target: §fX=" + x + " §fZ=" + z));
+        }
+        return lines;
     }
     
     /**

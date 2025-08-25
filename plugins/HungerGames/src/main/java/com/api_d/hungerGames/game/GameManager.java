@@ -73,6 +73,7 @@ public class GameManager implements Listener {
     private boolean pvpEnabled = false;
     private boolean feastSpawned = false;
     private long gameStartTime;
+    private ScoreboardManager scoreboardManager;
     
     public GameManager(Plugin plugin, GameConfig config, DatabaseManager databaseManager, 
                       PlayerManager playerManager, KitManager kitManager) {
@@ -91,8 +92,9 @@ public class GameManager implements Listener {
         this.borderManager = new BorderManager(plugin, config);
         this.finalFightManager = new FinalFightManager(plugin, alivePlayers);
         this.spectatorManager = new SpectatorManager((HungerGames) plugin, config, kitManager);
-        // Initialize protection manager after construction to avoid this-escape
+        // Initialize managers after construction to avoid this-escape
         this.protectionManager = null;
+        this.scoreboardManager = null;
     }
     
     /**
@@ -103,6 +105,7 @@ public class GameManager implements Listener {
         GameManager manager = new GameManager(plugin, config, databaseManager, playerManager, kitManager);
         manager.initializeEventListeners();
         manager.initializeProtectionManager();
+        manager.initializeScoreboardManager();
         return manager;
     }
     
@@ -120,6 +123,13 @@ public class GameManager implements Listener {
     private void initializeProtectionManager() {
         this.protectionManager = new GameProtectionManager((HungerGames) plugin, config, this);
         this.protectionManager.initialize();
+    }
+
+    /**
+     * Initialize scoreboard manager after construction to avoid this-escape
+     */
+    private void initializeScoreboardManager() {
+        this.scoreboardManager = new ScoreboardManager(plugin, this);
     }
     
     /**
@@ -154,6 +164,8 @@ public class GameManager implements Listener {
             // Start waiting for players
             stateMachine.transitionTo(GameState.WAITING, "Game initialized");
             startWaitingPhase();
+            // Start scoreboard updates in waiting phase
+            scoreboardManager.start();
             
             logger.info("Game initialized successfully with ID: " + currentGame.getId());
             
@@ -643,12 +655,23 @@ public class GameManager implements Listener {
             pvpEnableTask.cancel();
         }
         
+        final int delay = config.getPvpDelay();
+        // Countdown task
         pvpEnableTask = new BukkitRunnable() {
+            int remaining = delay;
             @Override
             public void run() {
-                enablePvp();
+                if (remaining <= 0) {
+                    enablePvp();
+                    this.cancel();
+                    return;
+                }
+                if (remaining <= 10 || remaining % 30 == 0) {
+                    broadcastMessage("§ePvP enabled in §c" + remaining + "§e seconds!");
+                }
+                remaining--;
             }
-        }.runTaskLater(plugin, config.getPvpDelay() * 20L);
+        }.runTaskTimer(plugin, 0L, 20L);
     }
     
     /**
@@ -959,6 +982,9 @@ public class GameManager implements Listener {
         finalFightManager.cleanup();
         spectatorManager.cleanup();
         protectionManager.cleanup();
+        if (scoreboardManager != null) {
+            scoreboardManager.stop();
+        }
     }
     
     /**
@@ -1148,6 +1174,34 @@ public class GameManager implements Listener {
      */
     public GameProtectionManager getProtectionManager() {
         return protectionManager;
+    }
+    
+    /**
+     * Expose player manager for UI
+     */
+    public com.api_d.hungerGames.player.PlayerManager getPlayerManager() {
+        return playerManager;
+    }
+    
+    /**
+     * Expose game start time for UI
+     */
+    public long getGameStartTime() {
+        return gameStartTime;
+    }
+    
+    /**
+     * Expose kit manager for UI
+     */
+    public KitManager getKitManager() {
+        return kitManager;
+    }
+
+    /**
+     * Get the player's current kit
+     */
+    public Kit getPlayerKitFor(Player player) {
+        return kitManager.getPlayerKit(player);
     }
     
     /**

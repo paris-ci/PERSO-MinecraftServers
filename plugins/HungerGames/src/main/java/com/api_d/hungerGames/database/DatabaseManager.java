@@ -123,6 +123,16 @@ public class DatabaseManager {
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
                 """);
+
+            // Create Player Unlocked Kits table
+            executeUpdate(connection, """
+                CREATE TABLE IF NOT EXISTS player_unlocked_kits (
+                    player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+                    kit_id VARCHAR(50) NOT NULL,
+                    unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (player_id, kit_id)
+                )
+                """);
             
             // Create indexes for better performance
             executeUpdate(connection, "CREATE INDEX IF NOT EXISTS idx_players_uuid ON players(uuid)");
@@ -130,6 +140,8 @@ public class DatabaseManager {
             executeUpdate(connection, "CREATE INDEX IF NOT EXISTS idx_game_logs_game_id ON game_logs(game_id)");
             executeUpdate(connection, "CREATE INDEX IF NOT EXISTS idx_game_logs_player_id ON game_logs(player_id)");
             executeUpdate(connection, "CREATE INDEX IF NOT EXISTS idx_game_parties_game_id ON game_parties(game_id)");
+            executeUpdate(connection, "CREATE INDEX IF NOT EXISTS idx_unlocked_kits_player_id ON player_unlocked_kits(player_id)");
+            executeUpdate(connection, "CREATE INDEX IF NOT EXISTS idx_unlocked_kits_kit_id ON player_unlocked_kits(kit_id)");
             
             logger.info("Database schema created/updated successfully");
         }

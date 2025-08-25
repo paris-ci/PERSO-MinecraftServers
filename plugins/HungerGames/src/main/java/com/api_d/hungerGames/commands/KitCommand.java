@@ -100,14 +100,15 @@ public class KitCommand extends BaseCommand implements TabCompleter {
             }
             hgLogger.info("Game allows kit selection");
             
-            // Check if player can afford the kit
+            // Check if player can use the kit (unlocked or affordable)
             hgLogger.info("Step 5: Getting player credits...");
             int playerCredits = plugin.getPlayerManager().getPlayerCredits(player);
             hgLogger.info("Player credits: " + playerCredits);
             
-            // Check if player should pay for the kit and has enough credits
+            // If premium, allow if unlocked; else require payment/credits
             hgLogger.info("Step 6: Checking kit payment requirements...");
-            if (kit.shouldPlayerPay(player)) {
+            boolean hasUnlocked = plugin.getPlayerManager().hasUnlockedKit(player.getUniqueId(), kitId);
+            if (!hasUnlocked && kit.shouldPlayerPay(player)) {
                 hgLogger.info("Player needs to pay for kit - Cost: " + kit.getCost());
                 // Player needs to pay - check if they have enough credits
                 if (playerCredits < kit.getCost()) {
@@ -118,7 +119,7 @@ public class KitCommand extends BaseCommand implements TabCompleter {
                 }
                 hgLogger.info("Player has sufficient credits");
             } else {
-                hgLogger.info("Player does not need to pay for kit (admin bypass or free kit)");
+                hgLogger.info("Player does not need to pay for kit (admin bypass, free kit, or unlocked)");
             }
             
             // Fire kit selection event
@@ -138,12 +139,14 @@ public class KitCommand extends BaseCommand implements TabCompleter {
             hgLogger.info("Kit selection event was not cancelled");
             
             // Deduct credits if premium kit and player should pay
-            if (kit.isPremium() && kit.shouldPlayerPay(player)) {
+            if (kit.isPremium() && kit.shouldPlayerPay(player) && !hasUnlocked) {
                 hgLogger.info("Deducting credits for premium kit - Amount: " + kit.getCost());
                 // Handle credits deduction asynchronously
                 plugin.getPlayerManager().deductCredits(player.getUniqueId(), kit.getCost(), "Purchased " + kit.getDisplayName() + " kit")
                     .thenAccept(success -> {
                         if (success) {
+                            // Persist unlock on successful purchase
+                            plugin.getPlayerManager().unlockKit(player.getUniqueId(), kitId);
                             // Credits deducted successfully, select the kit
                             Bukkit.getScheduler().runTask(plugin, () -> {
                                 completeKitSelection(player, kitId, sender);

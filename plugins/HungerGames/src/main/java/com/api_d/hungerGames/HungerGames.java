@@ -27,7 +27,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.Location;
 import org.bukkit.Sound;
-import org.bukkit.Material;
 import org.bukkit.plugin.java.JavaPlugin;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
@@ -265,6 +264,25 @@ public final class HungerGames extends JavaPlugin implements Listener {
                 if (player != null) {
                     hgLogger.info("Loaded player data for " + event.getPlayer().getName() + 
                                    " (Credits: " + player.getCredits() + ")");
+                    // Auto-select last used kit if present and unlocked/available
+                    String lastKit = player.getLastKitUsed();
+                    if (lastKit != null) {
+                        try {
+                            boolean hasUnlocked = playerManager.hasUnlockedKit(event.getPlayer().getUniqueId(), lastKit);
+                            // If kit exists and is either free, unlocked, or admin bypass
+                            com.api_d.hungerGames.kits.Kit kit = kitManager.getKit(lastKit);
+                            if (kit != null) {
+                                int credits = player.getCredits();
+                                boolean canUse = hasUnlocked || !kit.isPremium() || kit.hasAdminBypass(event.getPlayer()) || credits >= kit.getCost();
+                                if (canUse) {
+                                    kitManager.setPlayerKit(event.getPlayer(), lastKit);
+                                    hgLogger.info("Auto-selected last kit '" + lastKit + "' for player " + event.getPlayer().getName());
+                                }
+                            }
+                        } catch (Exception ex) {
+                            hgLogger.log(Level.WARNING, "Failed to auto-select last kit for player: " + event.getPlayer().getName(), ex);
+                        }
+                    }
                 } else {
                     hgLogger.warning("Failed to load player data for " + event.getPlayer().getName());
                 }
@@ -346,8 +364,10 @@ public final class HungerGames extends JavaPlugin implements Listener {
             
             gameManager.handlePlayerDeath(player, killer, deathMessage);
             
-            // Set the player to spectator mode immediately
+            // Ensure flight for spectators
             player.setGameMode(org.bukkit.GameMode.SPECTATOR);
+            player.setAllowFlight(true);
+            player.setFlying(true);
             
             // Clear inventory and prevent drops
             event.getDrops().clear();
@@ -382,8 +402,38 @@ public final class HungerGames extends JavaPlugin implements Listener {
         
         // Check if the shooter has the Archer Pro kit
         if (kitManager.getPlayerKit(shooter.getUniqueId()) instanceof com.api_d.hungerGames.kits.premium.ArcherProKit) {
-            // Create explosion at arrow location
+            // Create explosion at arrow location unless at spawn or feast
             Location hitLocation = arrow.getLocation();
+
+            boolean isAtSpawn = false;
+            boolean isAtFeast = false;
+            try {
+                GameManager gm = this.gameManager;
+                if (gm != null) {
+                    // Spawn area: within spawn radius from spawnLocation
+                    java.lang.reflect.Field spawnField = GameManager.class.getDeclaredField("spawnLocation");
+                    spawnField.setAccessible(true);
+                    Location spawnLoc = (Location) spawnField.get(gm);
+                    if (spawnLoc != null) {
+                        int spawnRadius = config.getSpawnRadius();
+                        isAtSpawn = hitLocation.getWorld().equals(spawnLoc.getWorld()) && hitLocation.distance(spawnLoc) <= spawnRadius + 3;
+                    }
+
+                    // Feast area: within feast radius from feastLocation
+                    java.lang.reflect.Field feastField = GameManager.class.getDeclaredField("feastLocation");
+                    feastField.setAccessible(true);
+                    Location feastLoc = (Location) feastField.get(gm);
+                    if (feastLoc != null) {
+                        int feastRadius = config.getFeastRadius();
+                        isAtFeast = hitLocation.getWorld().equals(feastLoc.getWorld()) && hitLocation.distance(feastLoc) <= feastRadius + 3;
+                    }
+                }
+            } catch (Exception ignore) {}
+
+            if (isAtSpawn || isAtFeast) {
+                arrow.remove();
+                return;
+            }
             
             // Remove the arrow first
             arrow.remove();
@@ -455,6 +505,8 @@ public final class HungerGames extends JavaPlugin implements Listener {
             Bukkit.getScheduler().runTaskLater(this, () -> {
                 if (player.isOnline()) {
                     player.setGameMode(org.bukkit.GameMode.SPECTATOR);
+                    player.setAllowFlight(true);
+                    player.setFlying(true);
                     hgLogger.info("Forced " + player.getName() + " to stay in spectator mode after respawn attempt");
                 }
             }, 1L);

@@ -155,9 +155,11 @@ public class KitSelectionGUI implements Listener {
             
             meta.lore(lore);
             
-            // Add visual indicator for selected kit (no enchantment glow due to API compatibility)
+            // Add visual indicator for selected kit
             if (isSelected) {
-                // Use a different approach - add a special lore line instead
+                // Enchantment glow trick without showing enchant details
+                item.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.UNBREAKING, 1);
+                meta.addItemFlags(org.bukkit.inventory.ItemFlag.HIDE_ENCHANTS);
                 lore.add(Component.text("§a§l✓ SELECTED"));
             }
             
@@ -250,13 +252,14 @@ public class KitSelectionGUI implements Listener {
         
         plugin.getLogger().fine("Found kit: " + clickedKit.getId() + " for player: " + player.getName());
         
-        // Check if player can afford the kit
+        // Check if player can use the kit: unlocked or affordable
         int playerCredits = plugin.getPlayerManager().getPlayerCredits(player);
-        plugin.getLogger().fine("Player credits: " + playerCredits + ", Kit cost: " + clickedKit.getCost());
+        boolean hasUnlocked = plugin.getPlayerManager().hasUnlockedKit(player.getUniqueId(), clickedKit.getId());
+        plugin.getLogger().fine("Player credits: " + playerCredits + ", Kit cost: " + clickedKit.getCost() + ", Unlocked: " + hasUnlocked);
         
-        if (!clickedKit.canPlayerUse(player, playerCredits)) {
+        if (!hasUnlocked && !clickedKit.canPlayerUse(player, playerCredits)) {
             plugin.getLogger().fine("Player cannot afford kit: " + clickedKit.getId());
-            player.sendMessage(Component.text("You cannot afford this kit! You need " + clickedKit.getCost() + " credits.", NamedTextColor.RED));
+            player.sendMessage(Component.text("You cannot use this kit yet! You need " + clickedKit.getCost() + " credits.", NamedTextColor.RED));
             return;
         }
         
@@ -274,8 +277,8 @@ public class KitSelectionGUI implements Listener {
             return;
         }
         
-        // If it's a premium kit, show confirmation
-        if (clickedKit.isPremium()) {
+        // If it's a premium kit and not already unlocked, show confirmation
+        if (clickedKit.isPremium() && !hasUnlocked) {
             plugin.getLogger().info("Showing confirmation dialog for premium kit: " + clickedKit.getId() + " to player: " + player.getName());
             showConfirmationDialog(player, clickedKit);
         } else {
@@ -451,8 +454,14 @@ public class KitSelectionGUI implements Listener {
         
         plugin.getLogger().fine("Kit selection event not cancelled for player: " + player.getName());
         
-        // Deduct credits if premium kit and player should pay
+        // Deduct credits if premium kit and player should pay and not already unlocked
         if (kit.isPremium() && kit.shouldPlayerPay(player)) {
+            boolean hasUnlocked = plugin.getPlayerManager().hasUnlockedKit(player.getUniqueId(), kit.getId());
+            if (hasUnlocked) {
+                // Already unlocked; complete selection without paying
+                Bukkit.getScheduler().runTask(plugin, () -> completeKitSelection(player, kit));
+                return;
+            }
             plugin.getLogger().info("Deducting credits for premium kit: " + kit.getId() + " for player: " + player.getName() + " (cost: " + kit.getCost() + ")");
             // Handle credits deduction asynchronously
             plugin.getPlayerManager().deductCredits(player.getUniqueId(), kit.getCost(), "Purchased " + kit.getDisplayName() + " kit")
@@ -461,6 +470,8 @@ public class KitSelectionGUI implements Listener {
                         plugin.getLogger().info("Credits deducted successfully for kit: " + kit.getId() + " for player: " + player.getName());
                         // Credits deducted successfully, select the kit
                         Bukkit.getScheduler().runTask(plugin, () -> {
+                            // Persist unlock
+                            plugin.getPlayerManager().unlockKit(player.getUniqueId(), kit.getId());
                             completeKitSelection(player, kit);
                         });
                     } else {
