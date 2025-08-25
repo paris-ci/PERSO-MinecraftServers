@@ -140,23 +140,35 @@ public class KitCommand extends BaseCommand implements TabCompleter {
             // Deduct credits if premium kit and player should pay
             if (kit.isPremium() && kit.shouldPlayerPay(player)) {
                 hgLogger.info("Deducting credits for premium kit - Amount: " + kit.getCost());
-                plugin.getPlayerManager().deductCredits(player.getUniqueId(), kit.getCost(), "Purchased " + kit.getDisplayName() + " kit");
+                // Handle credits deduction asynchronously
+                plugin.getPlayerManager().deductCredits(player.getUniqueId(), kit.getCost(), "Purchased " + kit.getDisplayName() + " kit")
+                    .thenAccept(success -> {
+                        if (success) {
+                            // Credits deducted successfully, select the kit
+                            Bukkit.getScheduler().runTask(plugin, () -> {
+                                completeKitSelection(player, kitId, sender);
+                            });
+                        } else {
+                            // Failed to deduct credits
+                            Bukkit.getScheduler().runTask(plugin, () -> {
+                                sendMessage(sender, "§cFailed to purchase kit! Please try again.");
+                                hgLogger.warning("Failed to deduct credits for kit purchase");
+                            });
+                        }
+                    })
+                    .exceptionally(throwable -> {
+                        // Handle any errors
+                        Bukkit.getScheduler().runTask(plugin, () -> {
+                            sendMessage(sender, "§cAn error occurred while purchasing the kit. Please try again.");
+                            hgLogger.error("Error deducting credits for kit purchase", throwable);
+                        });
+                        return null;
+                    });
+                return true; // Exit early, kit selection will be handled in the callback
             }
             
-            // Select the kit
-            hgLogger.info("Step 8: Setting player kit...");
-            plugin.getKitManager().setPlayerKit(player, kitId);
-            hgLogger.info("Kit successfully set for player");
-            
-            // Show success message with admin bypass info if applicable
-            if (kit.isPremium() && !kit.shouldPlayerPay(player)) {
-                hgLogger.info("Showing admin bypass success message");
-                sendMessage(sender, "§a§l[Admin Bypass] §7Kit " + kit.getDisplayName() + " selected for FREE!");
-            } else {
-                hgLogger.info("Showing regular success message");
-                sendMessage(sender, plugin.getGameConfig().getMessage("kit_selected", "kit", kit.getDisplayName()));
-            }
-            
+            // For free kits or admin bypass, select immediately
+            completeKitSelection(player, kitId, sender);
             hgLogger.info("KitCommand.execute() completed successfully");
             hgLogger.exit("execute", true);
             return true;
@@ -185,5 +197,23 @@ public class KitCommand extends BaseCommand implements TabCompleter {
         return completions;
     }
     
+    /**
+     * Complete the kit selection process (called after credits are deducted)
+     */
+    private void completeKitSelection(Player player, String kitId, CommandSender sender) {
+        hgLogger.info("Step 8: Setting player kit...");
+        plugin.getKitManager().setPlayerKit(player, kitId);
+        hgLogger.info("Kit successfully set for player");
+        
+        // Show success message with admin bypass info if applicable
+        Kit kit = plugin.getKitManager().getKit(kitId);
+        if (kit != null && kit.isPremium() && !kit.shouldPlayerPay(player)) {
+            hgLogger.info("Showing admin bypass success message");
+            sendMessage(sender, "§a§l[Admin Bypass] §7Kit " + kit.getDisplayName() + " selected for FREE!");
+        } else {
+            hgLogger.info("Showing regular success message");
+            sendMessage(sender, plugin.getGameConfig().getMessage("kit_selected", "kit", kit.getDisplayName()));
+        }
+    }
 
 }
