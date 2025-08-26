@@ -268,39 +268,76 @@ public class PlatformGenerator {
     private void fillChestWithLoot(Chest chest, List<String> lootItems) {
         Inventory inv = chest.getInventory();
 
-        for (String itemString : lootItems) {
-            // Parse item string format: "MATERIAL:AMOUNT"
+        // Build a richer loot pool using configured items + extra defaults
+        java.util.List<String> pool = new java.util.ArrayList<>(lootItems);
+        // Extra items to add variety
+        java.util.List<String> extras = java.util.Arrays.asList(
+            "GOLDEN_APPLE:1",
+            "COOKED_BEEF:8",
+            "ARROW:16",
+            "BOW:1",
+            "IRON_SWORD:1",
+            "SHIELD:1",
+            "IRON_HELMET:1",
+            "IRON_CHESTPLATE:1",
+            "IRON_LEGGINGS:1",
+            "IRON_BOOTS:1",
+            "ENDER_PEARL:2",
+            "WATER_BUCKET:1",
+            "LAVA_BUCKET:1",
+            "EXP_BOTTLE:16",
+            "COOKED_CHICKEN:6",
+            "SNOWBALL:16",
+            "TNT:2",
+            "FISHING_ROD:1"
+        );
+        pool.addAll(extras);
+
+        // Decide a random number of items per chest (e.g., 6-10)
+        int itemsToPlace = 6 + random.nextInt(5);
+        java.util.Collections.shuffle(pool, random);
+
+        int placed = 0;
+        int poolIndex = 0;
+        while (placed < itemsToPlace && poolIndex < pool.size()) {
+            String itemString = pool.get(poolIndex++);
             String[] parts = itemString.split(":");
             if (parts.length != 2) {
-                logger.warning("Invalid loot item format: " + itemString + ". " + "Expected format: MATERIAL:AMOUNT");
                 continue;
             }
-
             Material material;
             try {
                 material = Material.valueOf(parts[0].toUpperCase());
             } catch (IllegalArgumentException e) {
-                logger.warning("Invalid material in loot items: " + itemString + " - " + e.getMessage());
                 continue;
             }
-            
-            int amount = Integer.parseInt(parts[1]);
-            
-            ItemStack item = new ItemStack(material, amount);
-            
-            // Add item to a random slot in the chest
-            int slot = random.nextInt(inv.getSize());
-            
-            // Find an empty slot if the random one is occupied
-            while (inv.getItem(slot) != null) {
-                slot = (slot + 1) % inv.getSize();
+            int amount;
+            try {
+                amount = Integer.parseInt(parts[1]);
+            } catch (NumberFormatException e) {
+                continue;
             }
-            
-            inv.setItem(slot, item);
-            // logger.info("Added " + amount + "x " + material.name() + " to chest slot " + slot);
+
+            // Slight randomization of stack sizes (+/- up to 25% for stackables)
+            if (material.getMaxStackSize() > 1) {
+                double delta = (random.nextDouble() * 0.5) - 0.25; // -25% to +25%
+                amount = Math.max(1, Math.min(material.getMaxStackSize(), (int)Math.round(amount * (1 + delta))));
+            }
+
+            ItemStack item = new ItemStack(material, amount);
+
+            // Random slot placement, find next empty if occupied
+            int slot = random.nextInt(inv.getSize());
+            int checks = 0;
+            while (inv.getItem(slot) != null && checks < inv.getSize()) {
+                slot = (slot + 1) % inv.getSize();
+                checks++;
+            }
+            if (inv.getItem(slot) == null) {
+                inv.setItem(slot, item);
+                placed++;
+            }
         }
-        
-        // logger.info("Chest filled successfully with " + lootItems.size() + " items");
     }
     
     /**

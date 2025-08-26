@@ -16,6 +16,11 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerToggleFlightEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
+import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import com.api_d.hungerGames.util.HGLogger;
@@ -271,6 +276,32 @@ public class GameProtectionManager implements Listener {
                 player.setFlying(true);
                 player.sendMessage("§eFlight is currently forced on while the game hasn't started!");
             }
+        }
+    }
+    
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onPlayerPortalOrTeleport(PlayerTeleportEvent event) {
+        if (event.getPlayer() == null || event.getTo() == null) {
+            return;
+        }
+        TeleportCause cause = event.getCause();
+        if (cause == TeleportCause.NETHER_PORTAL) {
+            // Block Nether access, but give full netherite armor as an easter egg
+            event.setCancelled(true);
+            Player player = event.getPlayer();
+            try {
+                PlayerInventory inv = player.getInventory();
+                ItemStack helmet = new ItemStack(Material.NETHERITE_HELMET, 1);
+                ItemStack chest = new ItemStack(Material.NETHERITE_CHESTPLATE, 1);
+                ItemStack legs = new ItemStack(Material.NETHERITE_LEGGINGS, 1);
+                ItemStack boots = new ItemStack(Material.NETHERITE_BOOTS, 1);
+                inv.setArmorContents(new ItemStack[]{boots, legs, chest, helmet});
+                player.sendMessage("§6Nether travel is disabled, but you feel empowered... §7(§fNetherite armor granted§7)");
+            } catch (Exception ignore) {}
+        } else if (cause == TeleportCause.END_PORTAL || cause == TeleportCause.END_GATEWAY) {
+            // Block End access entirely
+            event.setCancelled(true);
+            event.getPlayer().sendMessage("§cAccess to the End is disabled in Hunger Games!");
         }
     }
     
